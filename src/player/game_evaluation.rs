@@ -1,43 +1,4 @@
 //GameState Evaluation functions
-// use crate::{GameState, Direction, Piece, VictoryCondition};
-// // use std::cmp;
-// // use std::collections::{VecDeque, HashMap};
-
-// pub fn game_state_evaluation(state: &GameState, eval_no: &u8) -> i32 {
-//     match eval_no {
-//         0 => {default_evaluation(state)}
-//         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
-//     }
-// }
-
-// fn default_evaluation(state: &GameState) -> i32 {
-//     match &state.victory {
-//         Some(VictoryCondition::KingCaptured) => {return i32::MIN}
-//         Some(VictoryCondition::KingInCorner) => {return i32::MAX}
-//         None => {}
-//     }
-    
-//     let mut defender_count: i32 = 0;
-//     let mut attacker_count: i32 = 0;
-//     let mut king_pos: i32 = state.throne as i32;
-//     let mut king_loc: u8 = state.throne;
-//     for i in 0..(state.sizen * state.sizen) {
-//         match state.board.get(&i) {
-//             Some(&Piece::Attacker) => {attacker_count += 1;}
-//             Some(&Piece::Defender) => {defender_count += 1;}
-//             Some(&Piece::King) => {king_pos = i as i32; king_loc = i;}
-//             _ => {}
-//         }
-//     }
-//     let game_balence = (2 * defender_count) - attacker_count;
-
-//     // let midpoint: i32 = ((state.sizen as i32) - 1) / 2;
-//     // let king_distance = - ((king_pos % (state.sizen as i32)) - midpoint).abs() - ((king_pos / (state.sizen as i32)) - midpoint).abs();
-
-//     game_balence
-// }
-
-//GameState Evaluation functions
 use crate::{GameState, Direction, Piece, VictoryCondition, DEFAULT_7_D, DEFAULT_7_A, DEFAULT_11_A, DEFAULT_11_D};
 use std::cmp;
 use std::collections::{VecDeque, HashMap};
@@ -157,7 +118,7 @@ fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
             _=> {panic!("This pattern in game_state_evaluation should be unreachable. GameState victory field was not None, but didn't match to any existing VictoryCondition.");}
         }
     }
-    let legend = ["MB", "N", "FRC", "FC", "FE", "MC", "ME", "MD", "MA", "CD", "CA", "GD", "GA", "CR"];
+    let _legend = ["MB", "N", "FRC", "FC", "FE", "MC", "ME", "MD", "MA", "CD", "CA", "GD", "GA", "CR"];
     let mut attackers = vec![];
     let mut defenders = vec![];
     let mut king = (state.sizen * state.sizen)+1;
@@ -172,7 +133,7 @@ fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
             Piece::King => {
                 king = *pos;
             }
-            _ =>{println!("Sorry, this board size doesn't have a data table!"); panic!("Board size requsted for which no default game state has been implemented.");}
+            // _ =>{println!("Sorry, this board size doesn't have a data table!"); panic!("Board size requsted for which no default game state has been implemented.");}
         }
     }
     assert_ne!(king, (state.sizen * state.sizen)+1);

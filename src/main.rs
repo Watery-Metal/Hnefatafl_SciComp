@@ -9,7 +9,7 @@ fn main() {
     let human_players: u8;
     if arguments.len() > 1 {
         human_players = arguments[1].parse().expect("Could not parse argument as a number.");
-        if human_players > 2 {panic!("Invalid command given. Human player flag can be at most two.");}
+        // if human_players > 2 {panic!("Invalid command given. Human player flag can be at most two.");}
     } else {
         human_players = 2;
     }
@@ -44,6 +44,13 @@ fn main() {
             let a_name = utility::get_name("Attacker Name".to_string());
             let d_name = utility::get_name("Defender Name".to_string());
             game_organization::play(board_size, (a_name, true), (d_name, true), (0,0));
+        }
+        3 => {
+            println!("Trial Match mode");
+            let eval_1 = utility::get_no("First Evaluation Function:".to_string());
+            let eval_2 = utility::get_no("Second Evaluation Function:".to_string());
+            let trial_path = utility::get_name("Directory for test cases:".to_string());
+            game_organization::algorithmic_trial_matches(&trial_path, (eval_1, eval_2));
         }
         _ => {
             panic!("This arm is unreachable. More than 2 human players initialized.");

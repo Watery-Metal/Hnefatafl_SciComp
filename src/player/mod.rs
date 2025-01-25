@@ -1,5 +1,5 @@
 //Main Organization for alpha-beta algorithmic players
-use crate::{GameState, MoveRequest, Direction, Piece, utility};
+use crate::{GameState, MoveRequest, Direction, Piece};
 use std::cmp::{max, min};
 use std::collections::{VecDeque, HashMap};
 
@@ -8,7 +8,7 @@ mod game_evaluation;
 pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Piece>>)-> Option<MoveRequest>{
     //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
 
-    let a_b_depth: u8 = 3;//NOTICE: Low depth for testing.
+    let a_b_depth: u8 = 3;
     let alpha = i32::MIN;
     let beta = i32::MAX;
 
@@ -84,7 +84,7 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
 fn move_list(game: &GameState) -> Vec<MoveRequest> {
     //Generates all moves which are valid in a given GameState
     let mut moves = Vec::new();
-    let throne_space = game.throne % game.sizen;
+    // let throne_space = game.throne % game.sizen;
     let turn_parity = game.turn % 2 == 1;
     for i in 0..game.sizen {
         let row = game.peek_row(i);

@@ -1,5 +1,8 @@
 use crate::*;
 use std::collections::{VecDeque, HashMap};
+use std::fs;
+use std::io::Write;
+use std::path::PathBuf;
 
 pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), evaluations: (u8,u8)) {
     //Manages the game logic of hnefatafl
@@ -10,8 +13,6 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
     let mut attacker_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
     
     instance.show_board();
-    if utility::save_state_to_file(&instance, "test_file.txt".to_string()).is_ok() {println!("Successfully saved file");}
-    instance = utility::read_state_from_file(&"./test_file.txt".to_string()).unwrap();
     loop{
         //Main Gameplay loop
         let turn_parity = instance.turn % 2 == 1;
@@ -91,6 +92,123 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
             }
         }
         instance.show_board();
+        instance.turn += 1;
+    }
+}
+
+pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8)) {
+    //Iterates over GameState files to hold matches between Algorithmic Players
+
+    // //TO BE REMOVED
+    // println!("Saving Default GameState files");
+    // let game_sizes: [u8; 4] = [7, 9, 11, 13];
+    // for game_size in game_sizes{
+    //     let default_state: GameState = GameState::new(game_size);
+    //     let title = format!("standard{}x{}.txt", game_size, game_size);
+    //     if utility::save_state_to_file(&default_state, title).is_ok() {
+    //         println!("Saved {} board to file", game_size);
+    //     }
+    // }
+    // //
+
+    println!("Testing evaluations {} and {} over the directory: {}", evaluations.0, evaluations.1, trial_directory);
+    let file_path = PathBuf::from(trial_directory).join("../match_results.txt");
+    let mut file = fs::File::create(file_path).expect("Error creating file for algorithmic trial match output.");
+    
+    //TO DO: Change this to iterate over the boards in a directory
+    let paths = fs::read_dir(trial_directory).unwrap();
+    for path in paths {
+        // println!("I see: {}", &path.unwrap().path().display());
+        if path.is_ok() {
+            let trial = path.unwrap();
+            println!("Running trial on: {:?}", trial.file_name());
+            let result_tuple = trial_play(&trial.path(), evaluations.0, evaluations.1);
+            let new_entry = format!("{}, {}\n", utility::store_vc(&result_tuple.0), result_tuple.1);
+            if file.write(new_entry.as_bytes()).is_ok() {
+                println!("Trial match successfully written to file.");
+            }
+        }
+    }
+}
+
+fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8) -> (Option<VictoryCondition>, u32){
+    //Silent gameplay for testing algorithms
+    let mut instance: GameState = utility::read_state_from_file(board_path).unwrap();
+    let mut defender_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
+    let mut attacker_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
+    println!("Trial on the following GameState:");
+    instance.show_board();
+    loop{
+        //Main Gameplay loop
+        if instance.turn >= 255 {
+            //If a game goes on this long, there's probably a stalemate, exit without victory
+            return (instance.victory, instance.turn)
+        }
+        println!("Currently on turn {}", instance.turn);
+        let turn_parity = instance.turn % 2 == 1;
+        let player_history = if turn_parity {&attacker_states} else {&defender_states};
+        let new_move: Option<MoveRequest>;
+        let movement: u8;
+        loop{
+            if turn_parity {
+                //Attacker Turn
+                new_move = player::get_move(&instance, &attack_evaluation, player_history);
+                assert!(new_move.is_some());
+            } else {
+                //Defender Turn
+                new_move = player::get_move(&instance, &defend_evaluation, player_history);
+                assert!(new_move.is_some());
+            }
+
+            //Move received from player, attempting play
+            let movement_result = instance.piece_move(new_move.unwrap());
+            match movement_result.is_ok() {
+                true => {
+                    movement = movement_result.unwrap();
+                    break
+                }
+                false => {
+                    //Algorithmic Player Generated False Move
+                    //TO DO: Error handling for this case
+                    panic!("Algorithmic Player in trial match submitted an impossible move.");
+                }
+            } 
+        }
+
+        //Movement succeeds, Checking for captures
+        let captures: Vec<u8> = instance.capture_check(movement);
+        //If the king has been captured, the game ends
+        if instance.capture_pieces(captures).is_some() {
+            instance.victory = Some(VictoryCondition::KingCaptured);
+        }
+
+        //If the king is in a corner, the game ends
+        if instance.check_corners().is_some() {
+            instance.victory = Some(VictoryCondition::KingInCorner);
+        }
+        if instance.turn < 21 {
+            //Append board to history
+            if instance.turn % 2 == 1 {
+                attacker_states.push_back(instance.board.clone());
+            } else {
+                defender_states.push_back(instance.board.clone());
+            }
+        } else {
+            //Remove oldest board, and update history
+            if instance.turn % 2 == 1{
+                attacker_states.push_back(instance.board.clone());
+                assert!(attacker_states.pop_front().is_some());
+                assert!(attacker_states.len() < 11);
+            } else {
+                defender_states.push_back(instance.board.clone());
+                assert!(defender_states.pop_front().is_some());
+                assert!(defender_states.len() < 11);
+            }
+        }
+        if instance.victory.is_some() {
+            //Once the game is over, we need to send some data back to save
+            return (instance.victory, instance.turn)
+        }
         instance.turn += 1;
     }
 }

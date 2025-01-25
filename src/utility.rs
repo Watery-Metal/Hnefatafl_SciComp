@@ -1,6 +1,7 @@
 //Utilities for interfacing with human players
 use std::io;
 use std::fmt::Display;
+use std::path::PathBuf;
 use std::{fs, io::Write, error::Error};
 use std::collections::HashMap;
 use crate::{MoveRequest, Direction, GameState, VictoryCondition, Piece};
@@ -236,7 +237,7 @@ pub fn say_direction(input: &Direction) -> String {
     }
 }
 
-fn store_vc(victory: &Option<VictoryCondition>) -> String {
+pub fn store_vc(victory: &Option<VictoryCondition>) -> String {
     match victory {
         None => {"N".to_string()}
         &Some(VictoryCondition::KingInCorner) => {"K".to_string()}
@@ -285,7 +286,7 @@ pub fn save_state_to_file(game: &GameState, game_id: String) -> Result<(), Box<d
     Ok(())
 }
 
-pub fn read_state_from_file(file_path: &String) -> Option<GameState> {
+pub fn read_state_from_file(file_path: &PathBuf) -> Option<GameState> {
     //Attempts to read a GameState from a file, returning None if unsuccessful
     let file_content = fs::read_to_string(file_path).expect("No File Present");
     let mut game_data = file_content.lines().collect::<Vec<&str>>();
