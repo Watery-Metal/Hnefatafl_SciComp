@@ -1,0 +1,18 @@
+    // let mut starting_spot: u8 = 0;
+    // loop{
+    //     let viewer = state.board.get(&starting_spot);
+    //     if viewer.is_none() {
+    //         //We're only looking to initialize to squares on which there are pieces
+    //         if starting_spot > (state.sizen * state.sizen) - 2 {panic!("a_b_search could not find a piece to start searching on.");}
+    //         starting_spot += 1;
+    //         continue
+    //     }
+    //     if (viewer == Some(&Piece::Attacker)) == (state.turn % 2 == 1) {
+    //         break //This piece belongs to the active player
+    //     }
+    //     if starting_spot > (state.sizen * state.sizen) - 2 {panic!("a_b _search could not find a piece to start it's search on.");}
+    //     starting_spot += 1;
+    // }
+    // let mut a_move: Option<MoveRequest> = Some(MoveRequest{position:starting_spot, direction: Direction::U, magnitude:0});
+    // //Push a_move throught next move with an invalid move to move it to the first valid move.
+    // a_move = next_move(&a_move.unwrap(), &state);

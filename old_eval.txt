@@ -1,0 +1,92 @@
+fn default_evaluation (state: &GameState) -> i32 {
+    //Evaluation of how favorable a GameState is for the Defending player (the maximizer)
+    if state.victory.is_some() {
+        //Winning move should always take precedence
+        match state.victory {
+            Some(VictoryCondition::KingCaptured) => {return i32::MIN}
+            Some(VictoryCondition::KingInCorner) => {return i32::MAX}
+            _=> {panic!("This pattern in game_state_evaluation should be unreachable. GameState victory field was not None, but didn't match to any existing VictoryCondition.");}
+        }
+    }
+    let board_size = state.sizen as i32;
+    let mut defender_count: i32 = 0;
+    let mut attacker_count: i32 = 0;
+    let mut king_pos: i32 = state.throne as i32;
+    let mut king_loc: u8 = state.throne;
+    for i in 0..(state.sizen * state.sizen) {
+        match state.board.get(&i) {
+            Some(&Piece::Attacker) => {attacker_count += 1;}
+            Some(&Piece::Defender) => {defender_count += 1;}
+            Some(&Piece::King) => {king_pos = i as i32; king_loc = i;}
+            _ => {}
+        }
+    }
+    let piece_balence: i32 = (2 * defender_count) - attacker_count;//Material Balence temp implementation
+
+    let midpoint: i32 = ((state.sizen as i32) + 1) / 2;
+
+    //Fields to Corner temp implementation
+    let king_distance = (state.turn as i32) * ((king_pos % (state.sizen as i32)) - midpoint).abs() + ((king_pos / (state.sizen as i32)) - midpoint).abs();
+    //Lateral distance from an mid is |(king_pos % sizen)-midpoint|
+    //Vertical distance from an mid is |(king_pos / sizen)-midpoint|
+
+    //Defense of King temp implementation// Can be more robust with an advanced "peek" function
+    let mut king_caravan: i32 = 0;
+    let king_surroundings = vec![state.get_neighbor(&king_loc, Direction::U), state.get_neighbor(&king_loc, Direction::D), state.get_neighbor(&king_loc, Direction::L), state.get_neighbor(&king_loc, Direction::R)];
+    //Checking Vertical situation
+    if king_surroundings[0].is_some() && king_surroundings[1].is_some() {
+        //King has spaces above and below
+        let occupancy = (state.board.get(&king_surroundings[0].clone().unwrap().0), state.board.get(&king_surroundings[1].clone().unwrap().0));
+        let occ_mat = (occupancy.0.is_some(), occupancy.1.is_some());
+        match occ_mat {
+            (true, true) => {king_caravan += defender_count;} //King not vulnerable
+            (false, false) => {king_caravan += defender_count/2;} //King neither protected nor defended
+            (true, false) => {
+                if occupancy.0 == Some(&Piece::Defender) {
+                    king_caravan += defender_count + board_size; //King Protected and vulnerable
+                } else {
+                    king_caravan -= defender_count + board_size; //King possibly immediately vulberable
+                }
+            }
+            (false, true) => {
+                if occupancy.1 == Some(&Piece::Defender) {
+                    king_caravan += defender_count + board_size; //King Protected and vulnerable
+                } else {
+                    king_caravan -= defender_count + board_size; //King possibly immediately vulberable
+                }
+            }
+        }
+    } else {
+        //King is on vertical edge
+        king_caravan += 2000;//Effectively victory
+    }
+    //Checking Horizontal situation
+    if king_surroundings[2].is_some() && king_surroundings[3].is_some() {
+        //King has horizontal spaces
+        let occupancy = (state.board.get(&king_surroundings[2].clone().unwrap().0), state.board.get(&king_surroundings[3].clone().unwrap().0));
+        let occ_mat = (occupancy.0.is_some(), occupancy.1.is_some());
+        match occ_mat {
+            (true, true) => {king_caravan += defender_count;} //King not vulnerable
+            (false, false) => {king_caravan += defender_count/2;} //King neither protected nor defended
+            (true, false) => {
+                if occupancy.0 == Some(&Piece::Defender) {
+                    king_caravan += defender_count + board_size; //King Protected and vulnerable
+                } else {
+                    king_caravan -= defender_count + board_size; //King possibly immediately vulberable
+                }
+            }
+            (false, true) => {
+                if occupancy.1 == Some(&Piece::Defender) {
+                    king_caravan += defender_count + board_size; //King Protected and vulnerable
+                } else {
+                    king_caravan -= defender_count + board_size; //King possibly immediately vulberable
+                }
+            }
+        }
+    } else {
+        //King on a horizontal edge
+        king_caravan += 2000;
+    }
+
+    piece_balence + king_distance + king_caravan
+}
