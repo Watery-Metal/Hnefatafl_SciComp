@@ -49,7 +49,7 @@ fn default_evaluation (state: &GameState) -> i32 {
 
     //Defense of King temp implementation// Can be more robust with an advanced "peek" function
     let mut king_caravan: i32 = 0;
-    let king_surroundings = vec![state.get_neighbor(&king_loc, Direction::U), state.get_neighbor(&king_loc, Direction::D), state.get_neighbor(&king_loc, Direction::L), state.get_neighbor(&king_loc, Direction::R)];
+    let king_surroundings = [state.get_neighbor(&king_loc, Direction::U), state.get_neighbor(&king_loc, Direction::D), state.get_neighbor(&king_loc, Direction::L), state.get_neighbor(&king_loc, Direction::R)];
     //Checking Vertical situation
     if king_surroundings[0].is_some() && king_surroundings[1].is_some() {
         //King has spaces above and below

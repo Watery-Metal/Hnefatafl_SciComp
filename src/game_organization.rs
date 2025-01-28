@@ -3,6 +3,7 @@ use std::collections::{VecDeque, HashMap};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::Instant;
 
 pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), evaluations: (u8,u8)) {
     //Manages the game logic of hnefatafl
@@ -115,15 +116,13 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8)) {
     let file_path = PathBuf::from(trial_directory).join("../match_results.txt");
     let mut file = fs::File::create(file_path).expect("Error creating file for algorithmic trial match output.");
     
-    //TO DO: Change this to iterate over the boards in a directory
     let paths = fs::read_dir(trial_directory).unwrap();
     for path in paths {
-        // println!("I see: {}", &path.unwrap().path().display());
         if path.is_ok() {
             let trial = path.unwrap();
             println!("Running trial on: {:?}", trial.file_name());
             let result_tuple = trial_play(&trial.path(), evaluations.0, evaluations.1);
-            let new_entry = format!("{}, {}\n", utility::store_vc(&result_tuple.0), result_tuple.1);
+            let new_entry = format!("Game File:{:?}, Victory:{}, Length:{}, Avg Attack Time:{}, Slowest Attack Time:{}, Avg Defense Time:{}, Slowest Defense Time:{}\n", trial.file_name(), utility::store_vc(&result_tuple.0), result_tuple.1, result_tuple.2.0, result_tuple.2.1, result_tuple.3.0, result_tuple.3.1);
             if file.write(new_entry.as_bytes()).is_ok() {
                 println!("Trial match successfully written to file.");
             }
@@ -131,49 +130,60 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8)) {
     }
 }
 
-fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8) -> (Option<VictoryCondition>, u32){
+fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8) -> (Option<VictoryCondition>, u32, (u128, u128), (u128, u128)){
     //Silent gameplay for testing algorithms
     let mut instance: GameState = utility::read_state_from_file(board_path).unwrap();
     let mut defender_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
     let mut attacker_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
+    let mut avg_attack_time: u128 = 0;//All times are being measured in milliseconds
+    let mut worst_attack_time: u128 = 0;
+    let mut avg_defend_time: u128 = 0;
+    let mut worst_defend_time: u128 = 0;
     println!("Trial on the following GameState:");
     instance.show_board();
     loop{
         //Main Gameplay loop
         if instance.turn >= 255 {
             //If a game goes on this long, there's probably a stalemate, exit without victory
-            return (instance.victory, instance.turn)
+            return (instance.victory, instance.turn, (avg_attack_time, worst_attack_time), (avg_defend_time, worst_defend_time))
         }
         println!("Currently on turn {}", instance.turn);
         let turn_parity = instance.turn % 2 == 1;
         let player_history = if turn_parity {&attacker_states} else {&defender_states};
         let new_move: Option<MoveRequest>;
         let movement: u8;
-        loop{
-            if turn_parity {
-                //Attacker Turn
-                new_move = player::get_move(&instance, &attack_evaluation, player_history);
-                assert!(new_move.is_some());
-            } else {
-                //Defender Turn
-                new_move = player::get_move(&instance, &defend_evaluation, player_history);
-                assert!(new_move.is_some());
-            }
-
-            //Move received from player, attempting play
-            let movement_result = instance.piece_move(new_move.unwrap());
-            match movement_result.is_ok() {
-                true => {
-                    movement = movement_result.unwrap();
-                    break
-                }
-                false => {
-                    //Algorithmic Player Generated False Move
-                    //TO DO: Error handling for this case
-                    panic!("Algorithmic Player in trial match submitted an impossible move.");
-                }
-            } 
+        if turn_parity {
+            //Attacker Turn
+            let start_time = Instant::now();
+            new_move = player::get_move(&instance, &attack_evaluation, player_history);
+            let total_time = start_time.elapsed().as_millis();
+            assert!(new_move.is_some());
+            let attacker_turn_no = ((instance.turn + 1)/2) as u128;
+            avg_attack_time = ((avg_attack_time * (attacker_turn_no - 1)) + total_time) / attacker_turn_no;
+            if total_time > worst_attack_time {worst_attack_time = total_time;}
+        } else {
+            //Defender Turn
+            let start_time = Instant::now();
+            new_move = player::get_move(&instance, &defend_evaluation, player_history);
+            let total_time = start_time.elapsed().as_millis();
+            assert!(new_move.is_some());
+            let defender_turn_no = (instance.turn /2) as u128;
+            avg_defend_time = ((avg_defend_time*(defender_turn_no - 1)) + total_time) / (defender_turn_no);
+            if total_time > worst_defend_time {worst_defend_time = total_time;}
         }
+
+        //Move received from player, attempting play
+        let movement_result = instance.piece_move(new_move.unwrap());
+        match movement_result.is_ok() {
+            true => {
+                movement = movement_result.unwrap();
+            }
+            false => {
+                //Algorithmic Player Generated False Move
+                //TO DO: Error handling for this case
+                panic!("Algorithmic Player in trial match submitted an impossible move.");
+            }
+        } 
 
         //Movement succeeds, Checking for captures
         let captures: Vec<u8> = instance.capture_check(movement);
@@ -207,7 +217,7 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         }
         if instance.victory.is_some() {
             //Once the game is over, we need to send some data back to save
-            return (instance.victory, instance.turn)
+            return (instance.victory, instance.turn, (avg_attack_time, worst_attack_time), (avg_defend_time, worst_defend_time))
         }
         instance.turn += 1;
     }

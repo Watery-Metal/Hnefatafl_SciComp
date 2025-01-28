@@ -1,2 +1,1 @@
-C, 11
-C, 29
+Game File:"1standard7x7.txt", Victory:C, Length:29, Avg Attack Time:4284, Slowest Attack Time:7985, Avg Defense Time:92, Slowest Defense Time:246

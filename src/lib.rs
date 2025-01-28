@@ -374,7 +374,7 @@ impl GameState {
         let row_offset = self.sizen * row;
         let mut my_row = Vec::new();
         for i in 0..self.sizen{
-            my_row.push(self.board.get(&(row_offset + i)).clone());
+            my_row.push(self.board.get(&(row_offset + i)));
         }
         my_row
     }
@@ -383,7 +383,7 @@ impl GameState {
         //Returns a Vector containing the contents of a selected column
         let mut my_col = Vec::new();
         for i in 0..self.sizen {
-            my_col.push(self.board.get(&(col + (i * self.sizen))).clone());
+            my_col.push(self.board.get(&(col + (i * self.sizen))));
         }
         my_col
     }
