@@ -145,8 +145,7 @@ impl GameState {
         //Make sure the piece is going to move
         if request.magnitude == 0 {println!("You have to actually MOVE a piece on your turn."); return false}
 
-        let int_pos: u8;
-        match request.direction {
+        let int_pos: u8 = match request.direction {
             Direction::U => {
                 if request.position < (self.sizen * request.magnitude) {println!("That move goes out of bounds."); return false}
                 // let oob: i32 = (request.position as i32) - ((self.sizen * request.magnitude)as i32);
@@ -154,7 +153,7 @@ impl GameState {
                 for i in 1..=request.magnitude {
                     if !self.board.contains_key(&(request.position - (self.sizen * i))) {continue} else {println!("There's a piece in the way!"); return false}
                 }
-                int_pos = request.position - (self.sizen * request.magnitude);
+                request.position - (self.sizen * request.magnitude)
             },
             Direction::D => {
                 let oob = request.position + (self.sizen * request.magnitude);
@@ -162,7 +161,7 @@ impl GameState {
                 for i in 1..=request.magnitude {
                     if !self.board.contains_key(&(request.position + (self.sizen * i))) {continue} else {println!("There's a piece in the way."); return false}
                 }
-                int_pos = request.position + (self.sizen * request.magnitude);
+                request.position + (self.sizen * request.magnitude)
             },
             Direction::L => {
                 if request.position < request.magnitude || (request.position/self.sizen) > ((request.position - request.magnitude)/self.sizen) {println!("That move goes out of bounds."); return false}
@@ -171,7 +170,7 @@ impl GameState {
                 for i in 1..=request.magnitude {
                     if !self.board.contains_key(&(request.position - i)) {continue} else {println!("There's a piece in the way."); return false}
                 }
-                int_pos = request.position - request.magnitude;
+                request.position - request.magnitude
             },
             Direction::R => {
                 let oob = request.position + request.magnitude;
@@ -179,11 +178,12 @@ impl GameState {
                 for i in 1..=request.magnitude {
                     if !self.board.contains_key(&(request.position + i)) {continue} else {println!("There's a piece in the way."); return false}
                 }
-                int_pos = request.position + request.magnitude;
+                request.position + request.magnitude
             }
-        }
-        if *self.board.get(&request.position).unwrap() != Piece::King {
-            if int_pos == self.throne || self.corners.contains(&int_pos) {println!("Only the King can occupy the throne and the corners."); return false}
+        };
+        if *self.board.get(&request.position).unwrap() != Piece::King && (int_pos == self.throne || self.corners.contains(&int_pos)) {
+            println!("Only the King can occupy the throne and the corners.");
+            return false
         }
         true
     }
@@ -270,9 +270,9 @@ impl GameState {
         //Vector of all valid neighbor spaces
         let mut possibilities: Vec<(u8, Direction)> = Vec::new();
         for i in ALL_DIRECTIONS {
-            let check: Option<(u8, Direction)> = self.get_neighbor(&new_location, i);
-            if check.is_some() {
-                possibilities.push(check.unwrap());
+            // let check: Option<(u8, Direction)> = self.get_neighbor(&new_location, i);
+            if let Some(check) = self.get_neighbor(&new_location, i) {
+                possibilities.push(check);
             }
         }
 

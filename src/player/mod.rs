@@ -119,12 +119,10 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
                 for magnitude in 1..=none_count_c{
                     let destination = (sizen * (j- none_count_c - 1 + magnitude)) + index;
                     if !restricted_positions.contains(&destination) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{magnitude: magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
+                        new_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
                     }
-                    if j == sizen - 1 && col[(j - none_count_c - 1) as usize].is_none() {
-                        if !restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
+                    if j == sizen - 1 && col[(j - none_count_c - 1) as usize].is_none() && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King)) {
                             new_moves.push(MoveRequest{magnitude: none_count_c + 1, position: index + (sizen * (j - none_count_c - 1)), direction: Direction::D});
-                        }
                     }
                 }
             }
@@ -135,7 +133,7 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
                 for magnitude in 1..=none_count_c{
                     let destination = (j * sizen) + index - (sizen * magnitude);
                     if !restricted_positions.contains(&destination) || current_space == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{position: index + (j * sizen), direction: Direction::U, magnitude: magnitude});
+                        new_moves.push(MoveRequest{position: index + (j * sizen), direction: Direction::U, magnitude});
                     }
                 }
             }
@@ -171,7 +169,7 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
                 for magnitude in 1..=none_count_r{
                     let destination = (index * sizen) + j - (none_count_r + 1) + magnitude;
                     if !restricted_positions.contains(&destination) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{direction: Direction::R, magnitude: magnitude, position: (index * sizen) + j - (none_count_r + 1)});
+                        new_moves.push(MoveRequest{direction: Direction::R, magnitude, position: (index * sizen) + j - (none_count_r + 1)});
                     }
                 }
                 if j == (sizen - 1) && current_space.is_none() {
@@ -188,7 +186,7 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
                 for magnitude in 1..=none_count_r{
                     let destination = (index * sizen) + j - magnitude;
                     if !restricted_positions.contains(&destination) || row[j as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{direction: Direction::L, magnitude: magnitude, position: (index * sizen) + j});
+                        new_moves.push(MoveRequest{direction: Direction::L, magnitude, position: (index * sizen) + j});
                     }
                 }
             }

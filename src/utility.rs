@@ -246,10 +246,10 @@ pub fn store_vc(victory: &Option<VictoryCondition>) -> String {
 }
 
 fn store_piece(piece: &Piece) -> String {
-    match piece {
-        &Piece::Attacker => {"A".to_string()}
-        &Piece::Defender => {"D".to_string()}
-        &Piece::King => {"K".to_string()}
+    match *piece {
+        Piece::Attacker => {"A".to_string()}
+        Piece::Defender => {"D".to_string()}
+        Piece::King => {"K".to_string()}
     }
 }
 
@@ -275,13 +275,13 @@ pub fn save_state_to_file(game: &GameState, game_id: String) -> Result<(), Box<d
     //Converts a GameState to a legible and loadable test file
     let mut file = fs::File::create(game_id)?;
     let header = format!("{} {} {}\n", game.sizen, game.turn, store_vc(&game.victory));
-    file.write(header.as_bytes())?;
+    file.write_all(header.as_bytes())?;
 
     for i in 0..(game.sizen * game.sizen) {
         let candidate = game.board.get(&i);
         if candidate.is_none() {continue}
-        let entry = format!("{} {}\n", i, store_piece(&candidate.unwrap()));
-        file.write(entry.as_bytes())?;
+        let entry = format!("{} {}\n", i, store_piece(candidate.unwrap()));
+        file.write_all(entry.as_bytes())?;
     }
     Ok(())
 }

@@ -6,13 +6,12 @@ use std::env;
 
 fn main() {
     let arguments: Vec<String> = env::args().collect();
-    let human_players: u8;
-    if arguments.len() > 1 {
-        human_players = arguments[1].parse().expect("Could not parse argument as a number.");
+    let human_players: u8 = if arguments.len() > 1 {
+        arguments[1].parse().expect("Could not parse argument as a number.")
         // if human_players > 2 {panic!("Invalid command given. Human player flag can be at most two.");}
-    } else {
-        human_players = 2;
-    }
+        } else {
+            2
+        };
 
     println!("What board size would you like to play?");
     let board_size = utility::get_board_size();

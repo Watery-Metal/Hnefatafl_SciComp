@@ -151,7 +151,6 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         let turn_parity = instance.turn % 2 == 1;
         let player_history = if turn_parity {&attacker_states} else {&defender_states};
         let new_move: Option<MoveRequest>;
-        let movement: u8;
         if turn_parity {
             //Attacker Turn
             let start_time = Instant::now();
@@ -174,16 +173,16 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
 
         //Move received from player, attempting play
         let movement_result = instance.piece_move(new_move.unwrap());
-        match movement_result.is_ok() {
+        let movement: u8 = match movement_result.is_ok() {
             true => {
-                movement = movement_result.unwrap();
+                movement_result.unwrap()
             }
             false => {
                 //Algorithmic Player Generated False Move
                 //TO DO: Error handling for this case
                 panic!("Algorithmic Player in trial match submitted an impossible move.");
             }
-        } 
+        }; 
 
         //Movement succeeds, Checking for captures
         let captures: Vec<u8> = instance.capture_check(movement);

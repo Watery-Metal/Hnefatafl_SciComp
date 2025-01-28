@@ -9,7 +9,7 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u8) -> i32 {
         1 => {
             let signs = vec![-1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]; //Defender wants max
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
-            let weights = calc_weights(&state, &signs);
+            let weights = calc_weights(state, &signs);
             eval(state, weights) as i32}
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
@@ -150,16 +150,16 @@ fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
     let n = attackers.len() as f32 + defenders.len() as f32;
     let fc = coordination(&king_vec, 0, state.sizen);
     let fe = cmp::min(cmp::min(king % state.sizen, state.sizen -1 - king % state.sizen),cmp::min(king/state.sizen, state.sizen -1 - king/state.sizen)) as f32;
-    let mc = moves_to_goal(&state, &state.corners);
-    let me = moves_to_goal(&state, &edgelist);
-    let md = mobility(&state, &defenders);
-    let ma = mobility(&state, &attackers);
+    let mc = moves_to_goal(state, &state.corners);
+    let me = moves_to_goal(state, &edgelist);
+    let md = mobility(state, &defenders);
+    let ma = mobility(state, &attackers);
     let cd = coordination(&defenders, king, state.sizen);
     let ca = coordination(&attackers, king, state.sizen);
     let gd = grouping(&defenders, state.sizen);
     let ga = grouping(&attackers, state.sizen);
     let frc = f_r_control(&attackers, &defenders, state.sizen);
-    let cr = corners_reachable(&state, &attackers);
+    let cr = corners_reachable(state, &attackers);
     let evals = [mb,n,frc,fc,fe,mc,me,md,ma,cd,ca,gd,ga, cr];
     let mut eval: f32 = 0.0;
     //println!("factor: eval * weight = result");
@@ -229,7 +229,7 @@ fn mobility(state: &GameState, piece_list:  &Vec<u8>) -> f32{
     counter as f32
 }
 
-fn moves_to_goal(state: &GameState, goallist: &Vec<u8>) -> f32{
+fn moves_to_goal(state: &GameState, goallist: &[u8]) -> f32{
     let mut king = state.sizen * state.sizen;
     for (pos, piece) in &state.board{
         if *piece == Piece::King{
@@ -353,7 +353,7 @@ fn f_r_control(a_list:  &Vec<u8>, d_list:  &Vec<u8>, size: u8) -> f32{ //def max
     (sum as f32)/2.0
 }
 
-fn calc_weights(state: &GameState, signs: &Vec<f32>) -> Vec<f32>{
+fn calc_weights(state: &GameState, signs: &[f32]) -> Vec<f32>{
     let mut mb: f32 = 0.0;
     let mut n: f32 = 0.0;
     let mut frc: f32 = 0.0;
@@ -400,7 +400,7 @@ fn calc_weights(state: &GameState, signs: &Vec<f32>) -> Vec<f32>{
     weights
 }
 
-fn get_moves(board: &HashMap<u8, Piece>, corners: &Vec<u8>, throne: u8, size: u8, piece: u8, c: char) -> Vec<u8>{
+fn get_moves(board: &HashMap<u8, Piece>, corners: &[u8], throne: u8, size: u8, piece: u8, c: char) -> Vec<u8>{
     let mut moves = vec![];
     match c {
         'h' => {
