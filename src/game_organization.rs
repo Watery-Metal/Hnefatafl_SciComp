@@ -5,7 +5,24 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::time::Instant;
 
-pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), evaluations: (u8,u8)) {
+struct TestConfiguration {
+    //A struct for keeping track of all the parameters we need for algorithmic testing
+    attacker_eval: u8,
+    defender_eval: u8,
+    attacker_mo: u8,
+    defender_mo: u8
+}
+
+struct TestData {
+    avg_attack_time: u128,
+    worst_attack_time: u128,
+    avg_defend_time: u128,
+    worst_defend_time: u128,
+    victory: Option<VictoryCondition>,
+    length: u32
+}
+
+pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), evaluations: (u8,u8), move_orders: (u8,u8)) {
     //Manages the game logic of hnefatafl
     println!("Let's play Hnefatafl! {} must protect their king from {}.", defender.0, attacker.0);
     //Set board
@@ -19,6 +36,7 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
         let turn_parity = instance.turn % 2 == 1;
         let active_player = if turn_parity {&attacker} else {&defender};
         let active_eval = if turn_parity {&evaluations.0} else {&evaluations.1};
+        let move_order = if turn_parity {&move_orders.0} else {&move_orders.1};
         let player_history = if turn_parity {&attacker_states} else {&defender_states};
         let mut new_move: Option<MoveRequest>;
         let movement: u8;
@@ -35,7 +53,7 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
             } else {
                 //Player is an algorithm!
                 println!("{} is playing! Searching for move...", active_player.0);
-                new_move = player::get_move(&instance, active_eval, player_history);
+                new_move = player::get_move(&instance, active_eval, player_history, *move_order);
                 assert!(new_move.is_some());
                 let output_info = new_move.clone().unwrap();
                 println!("{} is going to move the piece at {} {} by {}.", active_player.0, utility::to_coord(&output_info.position, &instance.sizen), utility::say_direction(&output_info.direction), output_info.magnitude);
@@ -97,40 +115,37 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
     }
 }
 
-pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8)) {
+pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8), move_orders: (u8, u8), output_name: &str) {
     //Iterates over GameState files to hold matches between Algorithmic Players
-
-    // //TO BE REMOVED
-    // println!("Saving Default GameState files");
-    // let game_sizes: [u8; 4] = [7, 9, 11, 13];
-    // for game_size in game_sizes{
-    //     let default_state: GameState = GameState::new(game_size);
-    //     let title = format!("standard{}x{}.txt", game_size, game_size);
-    //     if utility::save_state_to_file(&default_state, title).is_ok() {
-    //         println!("Saved {} board to file", game_size);
-    //     }
-    // }
-    // //
-
     println!("Testing evaluations {} and {} over the directory: {}", evaluations.0, evaluations.1, trial_directory);
-    let file_path = PathBuf::from(trial_directory).join("../match_results.txt");
+    let data_name = format!("../{}_test_result.txt", output_name);
+    let file_path = PathBuf::from(trial_directory).join(data_name);
     let mut file = fs::File::create(file_path).expect("Error creating file for algorithmic trial match output.");
-    
     let paths = fs::read_dir(trial_directory).unwrap();
+    //TO BE CHANGED: in the future, change the TestConfiguration in between tests.
+    let tc = TestConfiguration{attacker_eval: evaluations.0, defender_eval: evaluations.1, attacker_mo: move_orders.0, defender_mo: move_orders.1};
     for path in paths {
         if path.is_ok() {
             let trial = path.unwrap();
             println!("Running trial on: {:?}", trial.file_name());
-            let result_tuple = trial_play(&trial.path(), evaluations.0, evaluations.1);
-            let new_entry = format!("Game File:{:?}, Victory:{}, Length:{}, Avg Attack Time:{}, Slowest Attack Time:{}, Avg Defense Time:{}, Slowest Defense Time:{}\n", trial.file_name(), utility::store_vc(&result_tuple.0), result_tuple.1, result_tuple.2.0, result_tuple.2.1, result_tuple.3.0, result_tuple.3.1);
-            if file.write(new_entry.as_bytes()).is_ok() {
-                println!("Trial match successfully written to file.");
+            if let Ok(test_results) = trial_play(&trial.path(), &tc) {
+                //Test concluded, write the returned data to our file
+                let new_entry = format!("Game File:{:?}, Victory:{}, Length:{}, Avg Attack Time:{}, Slowest Attack Time:{}, Avg Defense Time:{}, Slowest Defense Time:{}\n", trial.file_name(), utility::store_vc(&test_results.victory), test_results.length, test_results.avg_attack_time, test_results.worst_attack_time, test_results.avg_defend_time, test_results.worst_defend_time);
+                if file.write(new_entry.as_bytes()).is_ok() {
+                    println!("Trial match successfully written to file.");
+                }
+            } else {
+                //Test has returned an error, add some note to the Data File
+                let new_entry = format!("%Test on {:?} returned an error.\n", trial.file_name());
+                if file.write(new_entry.as_bytes()).is_ok() {
+                    println!("Test ended in error. Warning written to file.");
+                }
             }
         }
     }
 }
 
-fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8) -> (Option<VictoryCondition>, u32, (u128, u128), (u128, u128)){
+fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, ()> {
     //Silent gameplay for testing algorithms
     let mut instance: GameState = utility::read_state_from_file(board_path).unwrap();
     let mut defender_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
@@ -145,7 +160,8 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         //Main Gameplay loop
         if instance.turn >= 255 {
             //If a game goes on this long, there's probably a stalemate, exit without victory
-            return (instance.victory, instance.turn, (avg_attack_time, worst_attack_time), (avg_defend_time, worst_defend_time))
+            let test_results = TestData{avg_attack_time,worst_attack_time,avg_defend_time,worst_defend_time, victory: instance.victory, length: instance.turn};
+            return Ok(test_results)
         }
         println!("Currently on turn {}", instance.turn);
         let turn_parity = instance.turn % 2 == 1;
@@ -154,7 +170,7 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         if turn_parity {
             //Attacker Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &attack_evaluation, player_history);
+            new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo);
             let total_time = start_time.elapsed().as_millis();
             assert!(new_move.is_some());
             let attacker_turn_no = ((instance.turn + 1)/2) as u128;
@@ -163,7 +179,7 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         } else {
             //Defender Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &defend_evaluation, player_history);
+            new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo);
             let total_time = start_time.elapsed().as_millis();
             assert!(new_move.is_some());
             let defender_turn_no = (instance.turn /2) as u128;
@@ -179,8 +195,7 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
             }
             false => {
                 //Algorithmic Player Generated False Move
-                //TO DO: Error handling for this case
-                panic!("Algorithmic Player in trial match submitted an impossible move.");
+                return Err(())
             }
         }; 
 
@@ -216,7 +231,8 @@ fn trial_play(board_path: &PathBuf, attack_evaluation: u8, defend_evaluation: u8
         }
         if instance.victory.is_some() {
             //Once the game is over, we need to send some data back to save
-            return (instance.victory, instance.turn, (avg_attack_time, worst_attack_time), (avg_defend_time, worst_defend_time))
+            let test_results = TestData{avg_attack_time,worst_attack_time,avg_defend_time,worst_defend_time, victory: instance.victory, length: instance.turn};
+            return Ok(test_results)
         }
         instance.turn += 1;
     }
