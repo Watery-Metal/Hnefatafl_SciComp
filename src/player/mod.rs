@@ -112,8 +112,6 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
     //"Variable-bound row and column move generation"
     let mut new_moves = Vec::new();
     let restricted_positions = [0, sizen-1, sizen * sizen - 1, (sizen * sizen) - sizen, ((sizen * sizen) - 1)/2];
-    // let mut none_count_r: u8 = 0;
-    // let mut prev_active_r: bool = false;
     let mut none_count_c: u8 = 0;
     let mut prev_active_c: bool = false;
     for j in 0..sizen {
@@ -122,21 +120,22 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
             none_count_c += 1;
         } else {
             let is_my_piece = turn_parity == (current_space == Some(&Piece::Attacker)) && current_space.is_some();
-            if none_count_c == 0 {prev_active_c = is_my_piece; continue}
+            if (none_count_c == 0) && (j != sizen - 1) {prev_active_c = is_my_piece; continue}//Error Catch!!
 
             if prev_active_c {
                 //Downward moves to be added
                 for magnitude in 1..=none_count_c{
                     let destination = (sizen * (j- none_count_c - 1 + magnitude)) + index;
-                    if !restricted_positions.contains(&destination) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
+                    let viable_location = !restricted_positions.contains(&destination) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King);
+                    if viable_location {
                         new_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
                     }
-                    if j == sizen - 1 && col[(j - none_count_c - 1) as usize].is_none() && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King)) {
-                            new_moves.push(MoveRequest{magnitude: none_count_c + 1, position: index + (sizen * (j - none_count_c - 1)), direction: Direction::D});
-                    }
+                }
+                if (j == sizen - 1) && col[j as usize].is_none() && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1 -1) as usize] == Some(&Piece::King)) {//&& (none_count_c == 0) && prev_active_c && (col[j as usize].is_none()) && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j-1) as usize] == Some(&Piece::King)) {
+                    //This is the last space in the column,which is empty, and we own the prior piece.
+                    new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
                 }
             }
-
             prev_active_c = is_my_piece;
             if is_my_piece {
                 //Upward moves to be added
@@ -159,26 +158,24 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
     let restricted_positions = [0, sizen-1, sizen * sizen - 1, (sizen * sizen) - sizen, ((sizen * sizen) - 1)/2];
     let mut none_count_r: u8 = 0;
     let mut prev_active_r: bool = false;
-    // let mut none_count_c: u8 = 0;
-    // let mut prev_active_c: bool = false;
 
-    //GENERATION OF MOVES (MIXED)
+    //Row Move Generation
     for j in 0..sizen{
         let current_space = row[j as usize];
         if current_space.is_none() && j != sizen - 1 {
             none_count_r += 1;
         } else {
-            // if current_space.is_none() {none_count_r += 1;}
             let is_my_piece = turn_parity == (current_space == Some(&Piece::Attacker)) && current_space.is_some();
 
-            if none_count_r == 0 {prev_active_r = is_my_piece; continue}
+            if (none_count_r == 0) && (j != sizen - 1) {prev_active_r = is_my_piece; continue}
 
             if prev_active_r{
                 //Rightward moves to be added
             
                 for magnitude in 1..=none_count_r{
                     let destination = (index * sizen) + j - (none_count_r + 1) + magnitude;
-                    if !restricted_positions.contains(&destination) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
+                    let viable_location = !restricted_positions.contains(&destination) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King);
+                    if viable_location {
                         new_moves.push(MoveRequest{direction: Direction::R, magnitude, position: (index * sizen) + j - (none_count_r + 1)});
                     }
                 }
@@ -253,6 +250,15 @@ fn indices(sizen:u8, king: u8) -> Vec<u8> {
     //I've elected to hard-code this, because doing this abstractly
     //would be a great way to get untraceable bugs.
     match sizen{
+        3 => {
+            //This is only for testing purposes
+            match king{
+                0 => {vec![0,1,2]}
+                1 => {vec![1,0,2]}
+                2 =>{vec![2,1,0]}
+                _ =>{vec![0,1,2]}
+            }
+        }
         7 => {
             match king {
                 0 => {vec![0,1,2,3,4,5,6]}
@@ -315,5 +321,182 @@ fn indices(sizen:u8, king: u8) -> Vec<u8> {
             }
         }
         _ => {panic!("Invalid argument in mod.rs indices function");}
+    }
+}
+
+#[cfg(test)]
+mod tests{
+    use crate::utility;
+
+    use super::*;
+    #[test]
+    fn king_onto_edges(){
+        //King in the center of 3x3 board, must find four moves
+        let test_state = GameState{
+            sizen: 3,
+            turn: 2,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(4, Piece::King)]),
+            corners: vec![0,2,6,8]
+        };
+        let possible_moves_zero = move_list(&test_state, 0);
+        let possible_moves_one = move_list(&test_state, 1);
+        let possible_moves_two = move_list(&test_state, 2);
+        let possible_moves_three = move_list(&test_state, 3);
+
+        //Move Order Shouldn't change what moves we find
+        assert_eq!(possible_moves_one.len(), possible_moves_two.len());
+        assert_eq!(possible_moves_two.len(), possible_moves_three.len());
+        assert_eq!(possible_moves_zero.len(), possible_moves_one.len());
+
+        for movereq in possible_moves_three {
+            println!("{}",utility::say_direction(&movereq.direction));
+        }
+
+        // This board has four moves, up down left and right
+        assert_eq!(possible_moves_zero.len(), 4);
+    }
+
+    #[test]
+    fn defender_onto_edges(){
+        //Defender in the center of 3x3 board, must find four moves
+        let test_state = GameState{
+            sizen: 3,
+            turn: 2,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(4, Piece::Defender)]),
+            corners: vec![0,2,6,8]
+        };
+        let possible_moves_zero = move_list(&test_state, 0);
+        let possible_moves_one = move_list(&test_state, 1);
+        let possible_moves_two = move_list(&test_state, 2);
+        let possible_moves_three = move_list(&test_state, 3);
+
+        //Move Order Shouldn't change what moves we find
+        assert_eq!(possible_moves_one.len(), possible_moves_two.len());
+        assert_eq!(possible_moves_two.len(), possible_moves_three.len());
+        assert_eq!(possible_moves_zero.len(), possible_moves_one.len());
+
+        //This board has four moves, up down left and right
+        assert_eq!(possible_moves_zero.len(), 4);
+    }
+
+    #[test]
+    fn attacker_onto_edges(){
+        //Attacker in the center of 3x3 board, must find four moves
+        let test_state = GameState{
+            sizen: 3,
+            turn: 1,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(4, Piece::Attacker)]),
+            corners: vec![0,2,6,8]
+        };
+        let possible_moves_zero = move_list(&test_state, 0);
+        let possible_moves_one = move_list(&test_state, 1);
+        let possible_moves_two = move_list(&test_state, 2);
+        let possible_moves_three = move_list(&test_state, 3);
+
+        //Move Order Shouldn't change what moves we find
+        assert_eq!(possible_moves_one.len(), possible_moves_two.len());
+        assert_eq!(possible_moves_two.len(), possible_moves_three.len());
+        assert_eq!(possible_moves_zero.len(), possible_moves_one.len());
+
+        //This board has four moves, up down left and right
+        assert_eq!(possible_moves_zero.len(), 4);
+    }
+
+    #[test]
+    fn throne_movement_attacker() {
+        let mut test_state = GameState{
+            sizen: 3,
+            turn: 1,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(1, Piece::Attacker)]),
+            corners: vec![0,2,6,8]
+        };
+
+        //Attacker can only move down through the throne
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::D);
+        
+        //Similar for rightwards
+        test_state.board = HashMap::from([(3, Piece::Attacker)]);
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::R);
+
+         //Similar for leftwards
+         test_state.board = HashMap::from([(5, Piece::Attacker)]);
+         assert_eq!(move_list(&test_state, 0).len(), 1);
+         assert!(move_list(&test_state, 0)[0].direction == Direction::L);
+
+          //Similar for upwards
+        test_state.board = HashMap::from([(7, Piece::Attacker)]);
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::U)
+
+    }
+
+    #[test]
+    fn throne_movement_defender() {
+        let mut test_state = GameState{
+            sizen: 3,
+            turn: 2,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(1, Piece::Defender)]),
+            corners: vec![0,2,6,8]
+        };
+
+        //Defender can only move down through the throne
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::D);
+        
+        //Similar for rightwards
+        test_state.board = HashMap::from([(3, Piece::Defender)]);
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::R);
+
+         //Similar for leftwards
+         test_state.board = HashMap::from([(5, Piece::Defender)]);
+         assert_eq!(move_list(&test_state, 0).len(), 1);
+         assert!(move_list(&test_state, 0)[0].direction == Direction::L);
+
+          //Similar for upwards
+        test_state.board = HashMap::from([(7, Piece::Defender)]);
+        assert_eq!(move_list(&test_state, 0).len(), 1);
+        assert!(move_list(&test_state, 0)[0].direction == Direction::U);
+
+    }
+
+    #[test]
+    fn throne_movement_king() {
+        let mut test_state = GameState{
+            sizen: 3,
+            turn: 1,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(1, Piece::King)]),
+            corners: vec![0,2,6,8]
+        };
+
+        //King Can move left, right, down once, or down twice
+        assert_eq!(move_list(&test_state, 0).len(), 4);
+        
+        //Similar for rightwards
+        test_state.board = HashMap::from([(3, Piece::King)]);
+        assert_eq!(move_list(&test_state, 0).len(), 4);
+
+         //Similar for leftwards
+         test_state.board = HashMap::from([(5, Piece::King)]);
+         assert_eq!(move_list(&test_state, 0).len(), 4);
+
+          //Similar for upwards
+        test_state.board = HashMap::from([(7, Piece::King)]);
+        assert_eq!(move_list(&test_state, 0).len(), 4);
+
     }
 }

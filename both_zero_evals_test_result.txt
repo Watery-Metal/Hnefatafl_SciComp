@@ -1,3 +1,0 @@
-Game File:"1standard7x7.txt", Victory:N, Length:255, Avg Attack Time:65, Slowest Attack Time:415, Avg Defense Time:181, Slowest Defense Time:284
-Game File:"2standard9x9.txt", Victory:C, Length:25, Avg Attack Time:1566, Slowest Attack Time:4787, Avg Defense Time:529, Slowest Defense Time:1111
-Game File:"standard11x11.txt", Victory:C, Length:137, Avg Attack Time:5899, Slowest Attack Time:30998, Avg Defense Time:7420, Slowest Defense Time:24137

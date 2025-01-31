@@ -29,6 +29,7 @@ pub enum VictoryCondition {
 }
 
 #[derive(Clone)]
+#[derive(PartialEq)]
 pub enum Direction {
     U,
     D,

@@ -1,17 +1,9 @@
 TODO LIST:
 	-Ensure Ruleset compliances (published on isis)
-	-Write automated comparative testing for evaluations on randomized boards
-	-Prevent gameplay looping
-	
-
-TODO'S COMPLETED SINCE LAST REPORT:
-	-Vastly faster move generation (verification side-step)
-	-Minor optimization in move validation function & get_neighbor
-	-Implement "Hostile Empty Spaces" (Double check for correctness)
-	-Add concise "board peeking" for evaluation and encirclement evaluations
 
 ERROR INVESTIGATION NOTES:
 	-LINE 126 in MOD.rs: Confirm the indices of the secondary check in the "or"operator, this will be very hard to track otherwise
+	-RMG and CMG have an error: cannot see moving king into final edge to right or bottom
 
 	
 CODE OVERVIEW:
