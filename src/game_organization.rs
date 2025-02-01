@@ -55,7 +55,7 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
             } else {
                 //Player is an algorithm!
                 println!("{} is playing! Searching for move...", active_player.0);
-                new_move = player::get_move(&instance, active_eval, player_history, *move_order, a_b_depth);
+                new_move = player::get_move(&instance, active_eval, player_history, *move_order, a_b_depth, &120, Instant::now());
                 assert!(new_move.is_some());
                 let output_info = new_move.clone().unwrap();
                 println!("{} is going to move the piece at {} {} by {}.", active_player.0, utility::to_coord(&output_info.position, &instance.sizen), utility::say_direction(&output_info.direction), output_info.magnitude);
@@ -117,7 +117,7 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
     }
 }
 
-pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_orders: u8, output_name: &str, a_b_depth: u8) {
+pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_orders: u8, output_name: &str, a_b_depth: u8, time_cap:u8) {
     //Iterates over GameState files to hold matches between Algorithmic Players
     println!("Testing evaluations up to {} over the directory: {}", evaluations, trial_directory);
     let data_name = format!("../{}_test_result.txt", output_name);
@@ -158,7 +158,7 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_or
                 for m_ord_pair in &mord_pairs {
                     for algorithmic_pair in &eval_pairs{
                         let tc = TestConfiguration{attacker_eval: algorithmic_pair.0, defender_eval:algorithmic_pair.1, attacker_mo: m_ord_pair.0, defender_mo: m_ord_pair.1, a_b_depth:depth};
-                        if let Ok(test_results) = trial_play(&trial.path(), &tc) {
+                        if let Ok(test_results) = trial_play(&trial.path(), &tc, &time_cap) {
                             //Test concluded, write the returned data to our file
                             let new_entry = format!("{:?},{},{},{},{},{},{},{},{},{},{},{}\n", trial.file_name(), tc.a_b_depth, utility::store_vc(&test_results.victory), test_results.length, tc.attacker_eval, tc.attacker_mo, test_results.avg_attack_time, test_results.worst_attack_time, tc.defender_eval, tc.defender_mo, test_results.avg_defend_time, test_results.worst_defend_time);
                             if file.write(new_entry.as_bytes()).is_ok() {
@@ -178,7 +178,7 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_or
     }
 }
 
-fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, ()> {
+fn trial_play(board_path: &PathBuf, tc: &TestConfiguration, time_cap:&u8) -> Result<TestData, ()> {
     //Silent gameplay for testing algorithms
     let mut instance: GameState = utility::read_state_from_file(board_path).unwrap();
     let mut defender_states: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
@@ -203,7 +203,7 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
         if turn_parity {
             //Attacker Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo, tc.a_b_depth);
+            new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo, tc.a_b_depth, time_cap, Instant::now());
             let total_time = start_time.elapsed().as_millis();
             if new_move.is_none() {
                 //Could be a rare type of Game Victory
@@ -219,7 +219,7 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
         } else {
             //Defender Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo, tc.a_b_depth);
+            new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo, tc.a_b_depth, time_cap, Instant::now());
             let total_time = start_time.elapsed().as_millis();
             if new_move.is_none() {
                 //Error handling for rare game conditions

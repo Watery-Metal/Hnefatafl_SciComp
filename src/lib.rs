@@ -282,6 +282,7 @@ impl GameState {
         for index in captures {
             let capture = resultant_state.board.remove(&index);
             if capture == Some(Piece::King) {
+                //Special Handling for empty throne
                 resultant_state.victory = Some(VictoryCondition::KingCaptured);
             }
             if capture.is_none() {
@@ -319,7 +320,29 @@ impl GameState {
             let space = further.unwrap();
             if !self.board.contains_key(&space.0) {
                 //No player here; When it's a hostile space, capture anyway
-                if self.corners.contains(&space.0) || space.0 == self.throne {besiegt.push(opponent.0)}
+                if self.corners.contains(&space.0) || space.0 == self.throne {
+                    if space.0 == self.throne && self.board.get(&opponent.0) == Some(&Piece::King){
+                        //King is being trapped against the throne possibly
+                        let adjacent = [self.board.get(&(opponent.0 + 1)), self.board.get(&(opponent.0 - 1)), self.board.get(&(opponent.0 + self.sizen)), self.board.get(&(opponent.0 - self.sizen))];
+                        let mut trap_count: u8 = 0;
+                        for finding in adjacent {
+                            if finding == Some(&Piece::Attacker) {trap_count += 1;}
+                        }
+                        if trap_count > 2 {besiegt.push(opponent.0)}
+                    } else{
+                        besiegt.push(opponent.0)
+                    }
+                }
+                continue
+            }
+            if opponent.0 == self.throne {
+                //This can only happen if the king is on the throne, being attacked
+                let adjacent = [self.board.get(&(opponent.0 + 1)), self.board.get(&(opponent.0 - 1)), self.board.get(&(opponent.0 + self.sizen)), self.board.get(&(opponent.0 - self.sizen))];
+                    let mut trap_count: u8 = 0;
+                    for finding in adjacent {
+                        if finding == Some(&Piece::Attacker) {trap_count += 1;}
+                    }
+                if trap_count > 3 {besiegt.push(opponent.0)}
                 continue
             }
             if (self.board.get(&space.0) == Some(&Piece::Attacker)) == player {besiegt.push(opponent.0)}//Save location of any captured pieces

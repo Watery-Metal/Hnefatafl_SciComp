@@ -1,21 +1,28 @@
 //Main Organization for alpha-beta algorithmic players
 use crate::{GameState, MoveRequest, Direction, Piece};
+use std::time::Instant;
 use std::cmp::{max, min};
 use std::collections::{VecDeque, HashMap};
 
 mod game_evaluation;
 
-pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8)-> Option<MoveRequest>{
+pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8, time_cap: &u8, start_time: Instant)-> Option<MoveRequest>{
     //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
 
     let alpha = i32::MIN;
     let beta = i32::MAX;
 
-    a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order).1
+    a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order, time_cap, start_time).1
 }
 
-fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8) -> (i32, Option<MoveRequest>) {
+fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
+    
+    //Time limit, for practicality
+    if (start_time.elapsed().as_secs() as u8) >= *time_cap {
+        return (game_evaluation::game_state_evaluation(&state, eval), path)
+    }
+    
     if state.victory.is_some() || depth == 0 {
         return (game_evaluation::game_state_evaluation(&state, eval), path)
     }
@@ -38,7 +45,7 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
             let backup = possible_move.clone();
             let resultant_state = state.fq_game_update(&possible_move.clone());
             if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}//Disallow loops (within reason, checking hashmaps is expensive)
-            let search_result = a_b_search(resultant_state, depth - 1, alpha, bet, Some(possible_move), eval, None, move_order).0;
+            let search_result = a_b_search(resultant_state, depth - 1, alpha, bet, Some(possible_move), eval, None, move_order, time_cap, start_time).0;
             if search_result > value {
                 //Update the value and save the relevant move as well
                 value = search_result;
@@ -62,7 +69,7 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
             let backup = possible_move.clone();
             let resultant_state = state.fq_game_update(&possible_move.clone());
             if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}
-            let search_result = a_b_search(resultant_state, depth - 1, alph, beta, Some(possible_move), eval, None, move_order).0;
+            let search_result = a_b_search(resultant_state, depth - 1, alph, beta, Some(possible_move), eval, None, move_order, time_cap, start_time).0;
             if search_result < value {
                 value = search_result;
                 candidate_move = backup;
@@ -569,7 +576,7 @@ mod tests{
 
         let empty = VecDeque::new();
 
-        let received_move = get_move(&test_state, &0, &empty,0, 3).unwrap();
+        let received_move = get_move(&test_state, &0, &empty,0, 3, &255, Instant::now()).unwrap();
         //the best move is to win
         assert_eq!(received_move.position, 1);
         assert_eq!(received_move.magnitude, 1);
@@ -585,7 +592,7 @@ mod tests{
         };
 
         test_state.show_board();
-        let victory_is_up = get_move(&test_state, &0, &empty, 0, 3).unwrap();
+        let victory_is_up = get_move(&test_state, &0, &empty, 0, 3, &255, Instant::now()).unwrap();
         //The best move is victory
         assert_eq!(victory_is_up.position, 13);
         assert_eq!(victory_is_up.magnitude, 1);
