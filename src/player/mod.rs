@@ -5,10 +5,9 @@ use std::collections::{VecDeque, HashMap};
 
 mod game_evaluation;
 
-pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8)-> Option<MoveRequest>{
+pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8)-> Option<MoveRequest>{
     //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
 
-    let a_b_depth: u8 = 3;
     let alpha = i32::MIN;
     let beta = i32::MAX;
 
@@ -93,7 +92,9 @@ fn move_list(game: &GameState, move_order: u8) -> Vec<MoveRequest> {
     //Due to pruning, if we don't take care to sort the moves, the king will often overlook easy victory conditions
     moves.extend(row_moves);
     moves.extend(col_moves);
-    moves.sort();
+    if move_order == 4 {
+        moves.sort();
+    }
 
     let mut secondary_king_moves = Vec::new();
     let mut return_moves = Vec::new();
@@ -285,6 +286,7 @@ fn controlled_indices(state: &GameState, search_type: u8) -> (Vec<u8>, Vec<u8>) 
             (inward.clone(), inward)
         }
         _ => {
+            //4 is Magnitude sorting; Furthest moves looked at first
             // println!("Unhandled value in controlled_indices, defaulting to zero");
             let default: Vec<u8> = indices(state.sizen, 0);
             (default.clone(), default)
@@ -560,7 +562,7 @@ mod tests{
 
         let empty = VecDeque::new();
 
-        let received_move = get_move(&test_state, &0, &empty,0).unwrap();
+        let received_move = get_move(&test_state, &0, &empty,0, 3).unwrap();
         //the best move is to win
         assert_eq!(received_move.position, 1);
         assert_eq!(received_move.magnitude, 1);
@@ -576,7 +578,7 @@ mod tests{
         };
 
         test_state.show_board();
-        let victory_is_up = get_move(&test_state, &0, &empty, 0).unwrap();
+        let victory_is_up = get_move(&test_state, &0, &empty, 0, 3).unwrap();
         //The best move is victory
         assert_eq!(victory_is_up.position, 13);
         assert_eq!(victory_is_up.magnitude, 1);

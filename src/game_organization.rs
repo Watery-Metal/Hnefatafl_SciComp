@@ -10,7 +10,8 @@ struct TestConfiguration {
     attacker_eval: u8,
     defender_eval: u8,
     attacker_mo: u8,
-    defender_mo: u8
+    defender_mo: u8,
+    a_b_depth: u8
 }
 
 struct TestData {
@@ -24,6 +25,7 @@ struct TestData {
 
 pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), evaluations: (u8,u8), move_orders: (u8,u8)) {
     //Manages the game logic of hnefatafl
+    let a_b_depth: u8 = 3;//Algorithmic default depth
     println!("Let's play Hnefatafl! {} must protect their king from {}.", defender.0, attacker.0);
     //Set board
     let mut instance: GameState = GameState::new(board_size);
@@ -53,7 +55,7 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
             } else {
                 //Player is an algorithm!
                 println!("{} is playing! Searching for move...", active_player.0);
-                new_move = player::get_move(&instance, active_eval, player_history, *move_order);
+                new_move = player::get_move(&instance, active_eval, player_history, *move_order, a_b_depth);
                 assert!(new_move.is_some());
                 let output_info = new_move.clone().unwrap();
                 println!("{} is going to move the piece at {} {} by {}.", active_player.0, utility::to_coord(&output_info.position, &instance.sizen), utility::say_direction(&output_info.direction), output_info.magnitude);
@@ -115,30 +117,62 @@ pub fn play(board_size: u8, attacker: (String, bool), defender: (String, bool), 
     }
 }
 
-pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: (u8, u8), move_orders: (u8, u8), output_name: &str) {
+pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_orders: u8, output_name: &str, a_b_depth: u8) {
     //Iterates over GameState files to hold matches between Algorithmic Players
-    println!("Testing evaluations {} and {} over the directory: {}", evaluations.0, evaluations.1, trial_directory);
+    println!("Testing evaluations up to {} over the directory: {}", evaluations, trial_directory);
     let data_name = format!("../{}_test_result.txt", output_name);
     let file_path = PathBuf::from(trial_directory).join(data_name);
     let mut file = fs::File::create(file_path).expect("Error creating file for algorithmic trial match output.");
     let paths = fs::read_dir(trial_directory).unwrap();
-    //TO BE CHANGED: in the future, change the TestConfiguration in between tests.
-    let tc = TestConfiguration{attacker_eval: evaluations.0, defender_eval: evaluations.1, attacker_mo: move_orders.0, defender_mo: move_orders.1};
+
+    let data_header = "Game File, Search Depth, Victory, Length, Attacker Eval, Attacker Mord, Avg Attack Time, Slowest Attack Time, Defender Eval, Defender Mord, Avg Defense Time, Slowest Defense Time\n".to_string();
+        if file.write(data_header.as_bytes()).is_ok() {
+            println!("CSV successfully written to file.");
+        }
+
+    println!("Setting up test parameters...");
+    //Generate Test Configurations:
+    let mut eval_pairs: Vec<(u8,u8)> = Vec::new();
+    for i in 0..=evaluations{
+        for j in i..=evaluations {
+            eval_pairs.push((i,j));
+            if i != j {eval_pairs.push((j,i));}
+        }
+    }
+
+    let mut mord_pairs: Vec<(u8,u8)> = Vec::new();
+    for i in 0..=move_orders{
+        for j in i..=move_orders{
+            mord_pairs.push((i,j));
+            if i != j {mord_pairs.push((j,i));}
+        }
+    }
+    // let tc = TestConfiguration{attacker_eval: evaluations.0, defender_eval: evaluations.1, attacker_mo: move_orders.0, defender_mo: move_orders.1, a_b_depth};
+
+    //Begin iterating game boards with various configurations
     for path in paths {
         if path.is_ok() {
             let trial = path.unwrap();
             println!("Running trial on: {:?}", trial.file_name());
-            if let Ok(test_results) = trial_play(&trial.path(), &tc) {
-                //Test concluded, write the returned data to our file
-                let new_entry = format!("Game File:{:?}, Victory:{}, Length:{}, Avg Attack Time:{}, Slowest Attack Time:{}, Avg Defense Time:{}, Slowest Defense Time:{}\n", trial.file_name(), utility::store_vc(&test_results.victory), test_results.length, test_results.avg_attack_time, test_results.worst_attack_time, test_results.avg_defend_time, test_results.worst_defend_time);
-                if file.write(new_entry.as_bytes()).is_ok() {
-                    println!("Trial match successfully written to file.");
-                }
-            } else {
-                //Test has returned an error, add some note to the Data File
-                let new_entry = format!("%Test on {:?} returned an error.\n", trial.file_name());
-                if file.write(new_entry.as_bytes()).is_ok() {
-                    println!("Test ended in error. Warning written to file.");
+            //Permute Algorithms, and eval heuristics
+            for algorithmic_pair in &eval_pairs {
+                for m_ord_pair in &mord_pairs {
+                    for depth in 1..=a_b_depth{
+                        let tc = TestConfiguration{attacker_eval: algorithmic_pair.0, defender_eval:algorithmic_pair.1, attacker_mo: m_ord_pair.0, defender_mo: m_ord_pair.1, a_b_depth:depth};
+                        if let Ok(test_results) = trial_play(&trial.path(), &tc) {
+                            //Test concluded, write the returned data to our file
+                            let new_entry = format!("{:?},{},{},{},{},{},{},{},{},{},{},{}\n", trial.file_name(), tc.a_b_depth, utility::store_vc(&test_results.victory), test_results.length, tc.attacker_eval, tc.attacker_mo, test_results.avg_attack_time, test_results.worst_attack_time, tc.defender_eval, tc.defender_mo, test_results.avg_defend_time, test_results.worst_defend_time);
+                            if file.write(new_entry.as_bytes()).is_ok() {
+                                println!("Trial match successfully written to file.");
+                            }
+                        } else {
+                            //Test has returned an error, add some note to the Data File
+                            let new_entry = format!("%Test on {:?} returned an error.\n", trial.file_name());
+                            if file.write(new_entry.as_bytes()).is_ok() {
+                                println!("Test ended in error. Warning written to file.");
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -163,14 +197,14 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
             let test_results = TestData{avg_attack_time,worst_attack_time,avg_defend_time,worst_defend_time, victory: instance.victory, length: instance.turn};
             return Ok(test_results)
         }
-        println!("Currently on turn {}", instance.turn);
+        if instance.turn % 10 == 1 {println!("Currently on turn {}", instance.turn);}//Establishes that something is happening in slow tests
         let turn_parity = instance.turn % 2 == 1;
         let player_history = if turn_parity {&attacker_states} else {&defender_states};
         let new_move: Option<MoveRequest>;
         if turn_parity {
             //Attacker Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo);
+            new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo, tc.a_b_depth);
             let total_time = start_time.elapsed().as_millis();
             assert!(new_move.is_some());
             let attacker_turn_no = ((instance.turn + 1)/2) as u128;
@@ -179,7 +213,7 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
         } else {
             //Defender Turn
             let start_time = Instant::now();
-            new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo);
+            new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo, tc.a_b_depth);
             let total_time = start_time.elapsed().as_millis();
             assert!(new_move.is_some());
             let defender_turn_no = (instance.turn /2) as u128;

@@ -46,13 +46,14 @@ fn main() {
         }
         3 => {
             println!("Trial Match mode");
-            let eval_1 = utility::get_no("First Evaluation Function:".to_string());
-            let order_one = utility::get_no("First Move Ordering:".to_string());
-            let eval_2 = utility::get_no("Second Evaluation Function:".to_string());
-            let order_two = utility::get_no("Second Move Ordering:".to_string());
+            let a_b_depth: u8 = utility::get_no("Maximal Search depth:".to_string());
+            let eval = utility::get_no("Maximal Evaluation Function:".to_string());
+            let order = utility::get_no("Maximal Move Ordering:".to_string());
+            // let eval_2 = utility::get_no("Second Evaluation Function:".to_string());
+            // let order_two = utility::get_no("Second Move Ordering:".to_string());
             let trial_path = utility::get_name("Directory for test cases:".to_string());
             let output_name = utility::get_name("Output file name:".to_string());
-            game_organization::algorithmic_trial_matches(&trial_path, (eval_1, eval_2), (order_one, order_two), &output_name);
+            game_organization::algorithmic_trial_matches(&trial_path, eval, order, &output_name, a_b_depth);
         }
         _ => {
             panic!("Command line argrument was undefined.");
