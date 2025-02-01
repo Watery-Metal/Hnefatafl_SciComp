@@ -3,6 +3,7 @@ pub mod player;
 pub mod game_organization;
 
 use std::collections::HashMap;
+use std::cmp::Ordering;
 
 const DEFAULT_7_A: [u8; 8] = [3,10,21,22,26,27,38,45];
 const DEFAULT_7_D: [u8; 4] = [17,23,25,31];
@@ -30,6 +31,7 @@ pub enum VictoryCondition {
 
 #[derive(Clone)]
 #[derive(PartialEq)]
+#[derive(Debug)]
 pub enum Direction {
     U,
     D,
@@ -54,6 +56,30 @@ pub struct MoveRequest {
     position: u8,
     direction: Direction,
     magnitude: u8
+}
+
+impl PartialEq for MoveRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.magnitude == other.magnitude
+    }
+}
+
+impl Eq for MoveRequest {}
+
+impl PartialOrd for MoveRequest {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.magnitude.cmp(&other.magnitude))
+    }
+}
+
+impl Ord for MoveRequest {
+    fn cmp(&self, other:&Self) -> Ordering{
+        let size1 = self.magnitude;
+        let size2 = other.magnitude;
+        if size1 > size2 {return Ordering::Greater}//These are flipped
+        if size1 < size2 {return Ordering::Less}
+        Ordering::Equal
+    }
 }
 
 impl GameState {

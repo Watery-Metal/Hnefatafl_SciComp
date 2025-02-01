@@ -74,43 +74,33 @@ fn move_list(game: &GameState, move_order: u8) -> Vec<MoveRequest> {
     let mut moves = Vec::new();
     let search_order = controlled_indices(game, move_order);
     let turn_parity = game.turn % 2 == 1;
+    let mut king_moves: Vec<MoveRequest> = Vec::new();
     let mut row_moves =Vec::new();
     let mut col_moves = Vec::new();
 
     for i in search_order.0 {
         let row = game.peek_row(i);
         let new_moves_r = rmg(i, turn_parity, game.sizen, row);
-        row_moves.extend(new_moves_r);
+        row_moves.extend(new_moves_r.0);
+        king_moves.extend(new_moves_r.1)
     }
     for i in search_order.1 {
         let col = game.peek_col(i);
         let new_moves_c = cmg(i, turn_parity, game.sizen, col);
-        col_moves.extend(new_moves_c);
-        // moves.extend(new_moves_c);
-        // moves.extend(new_moves_r);
+        col_moves.extend(new_moves_c.0);
+        king_moves.extend(new_moves_c.1);
     }
-    //TODO:Feather the moves from each list together into 
-    // let mut intermediate_moves = Vec::new();
-    // let rmi = row_moves.into_iter();
-    // let cmi = col_moves.into_iter();
-    // let mut feather_pair = (rmi.next(), cmi.next());
-    // while feather_pair != (None, None) {
-    //     if let Some(row_move) = feather_pair.0 {
-    //         moves.extend(row_move);
-    //     }
-    //     if let Some(col_move) = feather_pair.1 {
-    //         moves.extend(col_move);
-    //     }
-    // }
-
     moves.extend(row_moves);
     moves.extend(col_moves);
-    moves
+    moves.sort();
+    king_moves.extend(moves);
+    king_moves
 }
 
-fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Vec<MoveRequest> {
+fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> (Vec<MoveRequest>,Vec<MoveRequest>) {
     //"Variable-bound row and column move generation"
     let mut new_moves = Vec::new();
+    let mut king_moves: Vec<MoveRequest> = Vec::new();
     let restricted_positions = [0, sizen-1, sizen * sizen - 1, (sizen * sizen) - sizen, ((sizen * sizen) - 1)/2];
     let mut none_count_c: u8 = 0;
     let mut prev_active_c: bool = false;
@@ -128,12 +118,20 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
                     let destination = (sizen * (j- none_count_c - 1 + magnitude)) + index;
                     let viable_location = !restricted_positions.contains(&destination) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King);
                     if viable_location {
-                        new_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
+                        if col[(j- none_count_c - 1) as usize] == Some(&Piece::King){
+                            king_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
+                        } else {
+                            new_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
+                        }
                     }
                 }
                 if (j == sizen - 1) && col[j as usize].is_none() {//&& (none_count_c == 0) && prev_active_c && (col[j as usize].is_none()) && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j-1) as usize] == Some(&Piece::King)) {
                     if !restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                        if col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
+                            king_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                        } else {
+                            new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                        }
                     }
                 }
             }
@@ -143,20 +141,24 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
                 for magnitude in 1..=none_count_c{
                     let destination = (j * sizen) + index - (sizen * magnitude);
                     if !restricted_positions.contains(&destination) || current_space == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{position: index + (j * sizen), direction: Direction::U, magnitude});
+                        if current_space == Some(&Piece::King) {
+                            king_moves.push(MoveRequest{position: index + (j * sizen), direction: Direction::U, magnitude});
+                        } else {
+                            new_moves.push(MoveRequest{position: index + (j * sizen), direction: Direction::U, magnitude});
+                        }
                     }
                 }
             }
             none_count_c = 0;
         }
     }
-    // println!("DEBUGGGING: Col moves len {}", new_moves.len());
-    new_moves
+    (new_moves, king_moves)
 }
 
-fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Vec<MoveRequest> {
+fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> (Vec<MoveRequest>,Vec<MoveRequest>) {
     //"Variable-bound row and column move generation"
     let mut new_moves = Vec::new();
+    let mut king_moves: Vec<MoveRequest>= Vec::new();
     let restricted_positions = [0, sizen-1, sizen * sizen - 1, (sizen * sizen) - sizen, ((sizen * sizen) - 1)/2];
     let mut none_count_r: u8 = 0;
     let mut prev_active_r: bool = false;
@@ -176,13 +178,21 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
                     let destination = (index * sizen) + j - (none_count_r + 1) + magnitude;
                     let viable_location = !restricted_positions.contains(&destination) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King);
                     if viable_location {
-                        new_moves.push(MoveRequest{direction: Direction::R, magnitude, position: (index * sizen) + j - (none_count_r + 1)});
+                        if row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
+                            king_moves.push(MoveRequest{direction: Direction::R, magnitude, position: (index * sizen) + j - (none_count_r + 1)});
+                        } else {
+                            new_moves.push(MoveRequest{direction: Direction::R, magnitude, position: (index * sizen) + j - (none_count_r + 1)});
+                        }
                     }
                 }
                 if j == (sizen - 1) && current_space.is_none() {
                     //Catching when the end of the board is empty, but a piece can move there still
                     if (!restricted_positions.contains(&((index * sizen) + j))) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{direction: Direction::R, magnitude: none_count_r + 1, position: (index * sizen) + j - (none_count_r + 1)})
+                        if row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
+                            king_moves.push(MoveRequest{direction: Direction::R, magnitude: none_count_r + 1, position: (index * sizen) + j - (none_count_r + 1)});
+                        } else {
+                            new_moves.push(MoveRequest{direction: Direction::R, magnitude: none_count_r + 1, position: (index * sizen) + j - (none_count_r + 1)});
+                        }
                     }
                 }
             }
@@ -192,8 +202,12 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
                 //Leftward moves to be added
                 for magnitude in 1..=none_count_r{
                     let destination = (index * sizen) + j - magnitude;
-                    if !restricted_positions.contains(&destination) || row[j as usize] == Some(&Piece::King) {
-                        new_moves.push(MoveRequest{direction: Direction::L, magnitude, position: (index * sizen) + j});
+                    if !restricted_positions.contains(&destination) || current_space == Some(&Piece::King) {
+                        if current_space == Some(&Piece::King) {
+                            king_moves.push(MoveRequest{direction: Direction::L, magnitude, position: (index * sizen) + j});
+                        } else {
+                            new_moves.push(MoveRequest{direction: Direction::L, magnitude, position: (index * sizen) + j});
+                        }
                     }
                 }
             }
@@ -201,7 +215,7 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
         }
     }
     // println!("DEBUGGING: Row moves : {}", new_moves.len());
-    new_moves
+    (new_moves, king_moves)
 }
 
 fn controlled_indices(state: &GameState, search_type: u8) -> (Vec<u8>, Vec<u8>) {
@@ -499,5 +513,41 @@ mod tests{
         test_state.board = HashMap::from([(7, Piece::King)]);
         assert_eq!(move_list(&test_state, 0).len(), 4);
 
+    }
+
+    #[test]
+    fn seek_victory(){
+        let mut test_state = GameState{
+            sizen: 3,
+            turn: 2,
+            victory: None,
+            throne: 4,
+            board: HashMap::from([(1, Piece::King), (2, Piece::Attacker)]),
+            corners: vec![0,2,6,8]
+        };
+
+        let empty = VecDeque::new();
+
+        let received_move = get_move(&test_state, &0, &empty,0).unwrap();
+        //the best move is to win
+        assert_eq!(received_move.position, 1);
+        assert_eq!(received_move.magnitude, 1);
+        assert_eq!(received_move.direction, Direction::L);
+
+        test_state = GameState{
+            sizen: 7,
+            turn:2,
+            victory: None,
+            throne: 24,
+            board: HashMap::from([(13, Piece::King), (20, Piece::Defender), (27, Piece::Defender), (4, Piece::Attacker), (5, Piece::Attacker), (32, Piece::Defender), (33, Piece::Defender)]),
+            corners: vec![0,6,48,42]
+        };
+
+        test_state.show_board();
+        let victory_is_up = get_move(&test_state, &0, &empty, 0).unwrap();
+        //The best move is victory
+        assert_eq!(victory_is_up.position, 13);
+        assert_eq!(victory_is_up.magnitude, 1);
+        assert_eq!(victory_is_up.direction, Direction::U)
     }
 }

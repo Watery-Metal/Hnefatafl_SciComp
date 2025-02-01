@@ -38,7 +38,7 @@ fn default_evaluation (state: &GameState) -> i32 {
             _ => {}
         }
     }
-    let piece_balence: i32 = (2 * defender_count) - attacker_count;//Material Balence temp implementation
+    let piece_balence: i32 = 20 * ((2 * defender_count) - attacker_count);//Material Balence temp implementation
 
     let midpoint: i32 = ((state.sizen as i32) + 1) / 2;
 
