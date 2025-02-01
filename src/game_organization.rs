@@ -147,7 +147,6 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_or
             if i != j {mord_pairs.push((j,i));}
         }
     }
-    // let tc = TestConfiguration{attacker_eval: evaluations.0, defender_eval: evaluations.1, attacker_mo: move_orders.0, defender_mo: move_orders.1, a_b_depth};
 
     //Begin iterating game boards with various configurations
     for path in paths {
@@ -155,9 +154,9 @@ pub fn algorithmic_trial_matches(trial_directory: &str, evaluations: u8, move_or
             let trial = path.unwrap();
             println!("Running trial on: {:?}", trial.file_name());
             //Permute Algorithms, and eval heuristics
-            for algorithmic_pair in &eval_pairs {
+            for depth in 1..=a_b_depth {
                 for m_ord_pair in &mord_pairs {
-                    for depth in 1..=a_b_depth{
+                    for algorithmic_pair in &eval_pairs{
                         let tc = TestConfiguration{attacker_eval: algorithmic_pair.0, defender_eval:algorithmic_pair.1, attacker_mo: m_ord_pair.0, defender_mo: m_ord_pair.1, a_b_depth:depth};
                         if let Ok(test_results) = trial_play(&trial.path(), &tc) {
                             //Test concluded, write the returned data to our file
@@ -206,7 +205,14 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
             let start_time = Instant::now();
             new_move = player::get_move(&instance, &tc.attacker_eval, player_history, tc.attacker_mo, tc.a_b_depth);
             let total_time = start_time.elapsed().as_millis();
-            assert!(new_move.is_some());
+            if new_move.is_none() {
+                //Could be a rare type of Game Victory
+                if extinction_check(&instance) {
+                    instance.victory = Some(VictoryCondition::AttackerExtinction);
+                    let test_results = TestData{avg_attack_time,worst_attack_time,avg_defend_time,worst_defend_time, victory: instance.victory, length: instance.turn};
+                    return Ok(test_results)
+                } else { return Err(())}
+            }
             let attacker_turn_no = ((instance.turn + 1)/2) as u128;
             avg_attack_time = ((avg_attack_time * (attacker_turn_no - 1)) + total_time) / attacker_turn_no;
             if total_time > worst_attack_time {worst_attack_time = total_time;}
@@ -215,7 +221,14 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
             let start_time = Instant::now();
             new_move = player::get_move(&instance, &tc.defender_eval, player_history, tc.defender_mo, tc.a_b_depth);
             let total_time = start_time.elapsed().as_millis();
-            assert!(new_move.is_some());
+            if new_move.is_none() {
+                //Error handling for rare game conditions
+                if extinction_check(&instance) {
+                    instance.victory = Some(VictoryCondition::DefenderExtinction);
+                    let test_results = TestData{avg_attack_time,worst_attack_time,avg_defend_time,worst_defend_time, victory: instance.victory, length: instance.turn};
+                    return Ok(test_results)
+                } else {return Err(())}
+            }
             let defender_turn_no = (instance.turn /2) as u128;
             avg_defend_time = ((avg_defend_time*(defender_turn_no - 1)) + total_time) / (defender_turn_no);
             if total_time > worst_defend_time {worst_defend_time = total_time;}
@@ -270,4 +283,30 @@ fn trial_play(board_path: &PathBuf, tc: &TestConfiguration) -> Result<TestData, 
         }
         instance.turn += 1;
     }
+}
+
+fn extinction_check(instance: &GameState) -> bool {
+    //Check for extinction condition, otherwise, return error
+    let mut a_piece_count: u8 = 0;
+    let mut d_piece_count: u8 = 0;
+    let turn_parity = instance.turn % 2 == 1;
+    for i in 0..(instance.sizen * instance.sizen) {
+        match instance.board.get(&i) {
+            Some(&Piece::Attacker) => {a_piece_count += 1;}
+            Some(&Piece::Defender) | Some(&Piece::King) => {d_piece_count += 1;}
+            None => {}
+        }
+    }
+    if turn_parity {
+        if a_piece_count == 0 {
+            println!("Extinction Condition!");
+            instance.show_board();
+            return true
+        }
+    } else if d_piece_count < 2 {
+            println!("Extinction Condition?");
+            instance.show_board();
+            return true
+    }
+    false
 }

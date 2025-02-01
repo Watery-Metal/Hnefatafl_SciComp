@@ -26,7 +26,9 @@ pub enum Piece {
 #[derive(Clone)]//Apparently necessary to use VictoryCondition in an option?
 pub enum VictoryCondition {
     KingCaptured,
-    KingInCorner
+    KingInCorner,
+    AttackerExtinction,
+    DefenderExtinction
 }
 
 #[derive(Clone)]

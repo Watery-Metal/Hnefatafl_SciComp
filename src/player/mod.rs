@@ -11,14 +11,13 @@ pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Pi
     let alpha = i32::MIN;
     let beta = i32::MAX;
 
-    let result = a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order).1;
-    Some(result)
+    a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order).1
 }
 
-fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8) -> (i32, MoveRequest) {
+fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
     if state.victory.is_some() || depth == 0 {
-        return (game_evaluation::game_state_evaluation(&state, eval), path.unwrap())
+        return (game_evaluation::game_state_evaluation(&state, eval), path)
     }
     
     let maximizing = state.turn % 2 == 0;
@@ -28,6 +27,10 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
         let mut alpha = alph;
         let mut value = i32::MIN;
         let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation(&state, eval), path)
+        }
         let mut candidate_move = all_moves[0].clone();
         //We use alpha & beta indirectly here to avoid scopal issues with the loop
         for possible_move in all_moves {
@@ -44,12 +47,16 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
             if value > bet {break}
             alpha = max(alpha, value);
         }
-        (value, candidate_move)//Return Statement
+        (value, Some(candidate_move))//Return Statement
     } else {
         //Minimizing player (Attacker)
         let mut beta = bet;
         let mut value = i32::MAX;
         let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation(&state, eval), path)
+        }
         let mut candidate_move = all_moves[0].clone();
         for possible_move in move_list(&state, move_order) {
             let backup = possible_move.clone();
@@ -63,7 +70,7 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
             if value < alph {break}
             beta = min(beta, value);
         }
-        (value, candidate_move)//Return Statement
+        (value, Some(candidate_move))//Return Statement
     }
 
 }
@@ -142,9 +149,9 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> (V
                 if (j == sizen - 1) && col[j as usize].is_none() {//&& (none_count_c == 0) && prev_active_c && (col[j as usize].is_none()) && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j-1) as usize] == Some(&Piece::King)) {
                     if !restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
                         if col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
-                            king_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                            king_moves.push(MoveRequest{magnitude: none_count_c + 1, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
                         } else {
-                            new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                            new_moves.push(MoveRequest{magnitude: none_count_c + 1, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
                         }
                     }
                 }

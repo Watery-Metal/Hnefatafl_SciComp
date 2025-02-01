@@ -242,6 +242,8 @@ pub fn store_vc(victory: &Option<VictoryCondition>) -> String {
         None => {"N".to_string()}
         &Some(VictoryCondition::KingInCorner) => {"K".to_string()}
         &Some(VictoryCondition::KingCaptured) => {"C".to_string()}
+        &Some(VictoryCondition::AttackerExtinction) => {"A".to_string()}
+        &Some(VictoryCondition::DefenderExtinction) => {"D".to_string()}
     }
 }
 
@@ -267,6 +269,8 @@ fn read_victory(info: &str) -> Option<VictoryCondition> {
         "N" => {None}
         "K" => {Some(VictoryCondition::KingInCorner)}
         "C" => {Some(VictoryCondition::KingCaptured)}
+        "A" => {Some(VictoryCondition::AttackerExtinction)}
+        "D" => {Some(VictoryCondition::DefenderExtinction)}
         &_ => {None}
     }
 }
