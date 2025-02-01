@@ -131,9 +131,10 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
                         new_moves.push(MoveRequest{magnitude, position: (sizen * (j - none_count_c - 1)) + index, direction: Direction::D});
                     }
                 }
-                if (j == sizen - 1) && col[j as usize].is_none() && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1 -1) as usize] == Some(&Piece::King)) {//&& (none_count_c == 0) && prev_active_c && (col[j as usize].is_none()) && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j-1) as usize] == Some(&Piece::King)) {
-                    //This is the last space in the column,which is empty, and we own the prior piece.
-                    new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                if (j == sizen - 1) && col[j as usize].is_none() {//&& (none_count_c == 0) && prev_active_c && (col[j as usize].is_none()) && (!restricted_positions.contains(&(index + (sizen * j))) || col[(j-1) as usize] == Some(&Piece::King)) {
+                    if !restricted_positions.contains(&(index + (sizen * j))) || col[(j - none_count_c - 1) as usize] == Some(&Piece::King) {
+                        new_moves.push(MoveRequest{magnitude: none_count_c, direction: Direction::D, position: (index + (sizen * (j - 1 - none_count_c)))});
+                    }
                 }
             }
             prev_active_c = is_my_piece;
@@ -149,6 +150,7 @@ fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> Ve
             none_count_c = 0;
         }
     }
+    // println!("DEBUGGGING: Col moves len {}", new_moves.len());
     new_moves
 }
 
@@ -166,12 +168,10 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
             none_count_r += 1;
         } else {
             let is_my_piece = turn_parity == (current_space == Some(&Piece::Attacker)) && current_space.is_some();
-
             if (none_count_r == 0) && (j != sizen - 1) {prev_active_r = is_my_piece; continue}
 
             if prev_active_r{
                 //Rightward moves to be added
-            
                 for magnitude in 1..=none_count_r{
                     let destination = (index * sizen) + j - (none_count_r + 1) + magnitude;
                     let viable_location = !restricted_positions.contains(&destination) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King);
@@ -181,7 +181,7 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
                 }
                 if j == (sizen - 1) && current_space.is_none() {
                     //Catching when the end of the board is empty, but a piece can move there still
-                    if !restricted_positions.contains(&((index * sizen) + j)) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
+                    if (!restricted_positions.contains(&((index * sizen) + j))) || row[(j - none_count_r - 1) as usize] == Some(&Piece::King) {
                         new_moves.push(MoveRequest{direction: Direction::R, magnitude: none_count_r + 1, position: (index * sizen) + j - (none_count_r + 1)})
                     }
                 }
@@ -200,6 +200,7 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> Ve
             none_count_r = 0;
         }
     }
+    // println!("DEBUGGING: Row moves : {}", new_moves.len());
     new_moves
 }
 
@@ -476,7 +477,7 @@ mod tests{
     fn throne_movement_king() {
         let mut test_state = GameState{
             sizen: 3,
-            turn: 1,
+            turn: 2,
             victory: None,
             throne: 4,
             board: HashMap::from([(1, Piece::King)]),
