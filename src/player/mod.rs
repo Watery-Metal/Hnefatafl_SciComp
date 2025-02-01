@@ -90,11 +90,24 @@ fn move_list(game: &GameState, move_order: u8) -> Vec<MoveRequest> {
         col_moves.extend(new_moves_c.0);
         king_moves.extend(new_moves_c.1);
     }
+    //Due to pruning, if we don't take care to sort the moves, the king will often overlook easy victory conditions
     moves.extend(row_moves);
     moves.extend(col_moves);
     moves.sort();
-    king_moves.extend(moves);
-    king_moves
+
+    let mut secondary_king_moves = Vec::new();
+    let mut return_moves = Vec::new();
+    for movement in king_moves{
+        //Look for any move that lets the king win, and consider it first
+        if into_corner(&movement, &game.corners, &game.sizen) {
+            return_moves.push(movement);
+        } else {
+            secondary_king_moves.push(movement);
+        }
+    }
+    return_moves.extend(secondary_king_moves);
+    return_moves.extend(moves);
+    return_moves
 }
 
 fn cmg(index: u8, turn_parity: bool,  sizen: u8, col: Vec<Option<&Piece>>) -> (Vec<MoveRequest>,Vec<MoveRequest>) {
@@ -218,6 +231,25 @@ fn rmg(index: u8, turn_parity: bool,  sizen: u8, row: Vec<Option<&Piece>>) -> (V
     (new_moves, king_moves)
 }
 
+fn into_corner(movement: &MoveRequest, corners: &[u8], sizen: &u8) -> bool {
+    //Used to order moves involving the king; returns true iff the move goes into a corner
+    let new_location: u8 = match movement.direction {
+        Direction::U => {
+            movement.position - (movement.magnitude * sizen)
+        }
+        Direction::D => {
+            movement.position + (movement.magnitude * sizen)
+        }
+        Direction::L => {
+            movement.position - movement.magnitude
+        }
+        Direction::R => {
+            movement.position + movement.magnitude
+        }
+    };
+    corners.contains(&new_location)
+}
+
 fn controlled_indices(state: &GameState, search_type: u8) -> (Vec<u8>, Vec<u8>) {
     //Calls the indices function dependent upon or search organization argument
     match search_type {
@@ -253,7 +285,7 @@ fn controlled_indices(state: &GameState, search_type: u8) -> (Vec<u8>, Vec<u8>) 
             (inward.clone(), inward)
         }
         _ => {
-            println!("Unhandled value in controlled_indices, defaulting to zero");
+            // println!("Unhandled value in controlled_indices, defaulting to zero");
             let default: Vec<u8> = indices(state.sizen, 0);
             (default.clone(), default)
         }
