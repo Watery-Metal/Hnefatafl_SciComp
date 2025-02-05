@@ -95,7 +95,7 @@ impl GameState{
         }
     }
 
-    fn create_all_positions(position_list: Vec<>, sizen: u8, length: usize) -> Vec<>{
+    pub fn create_all_positions(position_list: Vec<>, sizen: u8, length: usize) -> Vec<>{
         let mut list = vec![];
         for element in position_list{
             let state = GameState::create_position_from_list(i.2,i.1,sizen,i.3);

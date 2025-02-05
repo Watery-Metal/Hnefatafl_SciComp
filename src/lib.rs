@@ -391,7 +391,7 @@ impl GameState {
         for index in captures {
             let capture = self.board.remove(&index);
             if capture.is_some() {
-                println!("Great! Piece at {} was captured!", utility::to_coord(&index, &self.sizen));
+                //println!("Great! Piece at {} was captured!", utility::to_coord(&index, &self.sizen));
                 if capture == Some(Piece::King) {king_captured = true;}
             } else {
                 println!("ERROR: Attempted and failed to remove piece at {}", utility::to_coord(&index, &self.sizen));

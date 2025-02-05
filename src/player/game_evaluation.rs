@@ -3,13 +3,37 @@ use crate::{GameState, Direction, Piece, VictoryCondition, DEFAULT_7_D, DEFAULT_
 use std::cmp;
 use std::collections::{VecDeque, HashMap};
 
-pub fn game_state_evaluation(state: &GameState, eval_no: &u8) -> i32 {
+pub fn game_state_evaluation(state: &GameState, eval_no: &u16) -> i32 {
     match eval_no {
         0 => {default_evaluation(state)}
-        1 => {
-            let signs = vec![-1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]; //Defender wants max
+        1..=16383 => {
+            let signs = vec![-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0]; //Defender wants max
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
-            let weights = calc_weights(state, &signs);
+            //let signs = vec![-1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]; //Defender wants max
+            let mut weights = calc_weights(state.sizen, &signs);
+            let binary = format!("{eval_no:014b}");
+            let mut i = 0;
+                        
+            for c in binary.chars(){
+                if c=='0'{
+                    weights[i] = 0.;
+                }
+                i+=1;
+            }
+             
+            eval(state, weights) as i32}
+        _=> {panic!("No evaluation function with index {} is present.", eval_no);}
+    }
+}
+
+pub fn game_state_evaluation_new(state: &GameState, eval_no: &u16, mut weights: Vec<f32>) -> i32 {
+    match eval_no {
+        0..=1000 => {
+            let multi = ((eval_no % 280) /14) as f32 ;
+            let factor = (eval_no % 14) as usize;
+            let adj = (eval_no / 280) as f32 -1.;
+                        
+            weights[factor] = weights[factor] * ( 1. + adj * (multi-10.));
             eval(state, weights) as i32}
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
@@ -145,21 +169,62 @@ fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
             edgelist.push(i);
         }
     }
-
-    let mb = attackers.len() as f32 / defenders.len() as f32;
-    let n = attackers.len() as f32 + defenders.len() as f32;
-    let fc = coordination(&king_vec, 0, state.sizen);
-    let fe = cmp::min(cmp::min(king % state.sizen, state.sizen -1 - king % state.sizen),cmp::min(king/state.sizen, state.sizen -1 - king/state.sizen)) as f32;
-    let mc = moves_to_goal(state, &state.corners);
-    let me = moves_to_goal(state, &edgelist);
-    let md = mobility(state, &defenders);
-    let ma = mobility(state, &attackers);
-    let cd = coordination(&defenders, king, state.sizen);
-    let ca = coordination(&attackers, king, state.sizen);
-    let gd = grouping(&defenders, state.sizen);
-    let ga = grouping(&attackers, state.sizen);
-    let frc = f_r_control(&attackers, &defenders, state.sizen);
-    let cr = corners_reachable(state, &attackers);
+    let mut mb = 0.;
+    let mut n = 0.;
+    let mut fc = 0.;
+    let mut fe = 0.;
+    let mut mc = 0.;
+    let mut me = 0.;
+    let mut md = 0.;
+    let mut ma = 0.;
+    let mut cd = 0.;
+    let mut ca = 0.;
+    let mut gd = 0.;
+    let mut ga = 0.;
+    let mut frc = 0.;
+    let mut cr = 0.;
+    if weights[0] != 0.{
+        mb = attackers.len() as f32 / defenders.len() as f32;
+    } 
+    if weights[1] != 0.{
+        n = attackers.len() as f32 + defenders.len() as f32;
+    } 
+    if weights[2] != 0.{
+        fc = coordination(&king_vec, 0, state.sizen);
+    } 
+    if weights[3] != 0.{
+        fe = cmp::min(cmp::min(king % state.sizen, state.sizen -1 - king % state.sizen),cmp::min(king/state.sizen, state.sizen -1 - king/state.sizen)) as f32;
+    } 
+    if weights[4] != 0.{
+        mc = moves_to_goal(state, &state.corners);
+    } 
+    if weights[5] != 0.{
+        me = moves_to_goal(state, &edgelist);
+    } 
+    if weights[6] != 0.{
+        md = mobility(state, &defenders);
+    } 
+    if weights[7] != 0.{
+        ma = mobility(state, &attackers);
+    } 
+    if weights[8] != 0.{
+        cd = coordination(&defenders, king, state.sizen);
+    } 
+    if weights[9] != 0.{
+        ca = coordination(&attackers, king, state.sizen);
+    } 
+    if weights[10] != 0.{
+        gd = grouping(&defenders, state.sizen);
+    } 
+    if weights[11] != 0.{
+        ga = grouping(&attackers, state.sizen);
+    } 
+    if weights[12] != 0.{
+        frc = f_r_control(&attackers, &defenders, state.sizen);
+    } 
+    if weights[13] != 0.{
+        cr = corners_reachable(state, &attackers);
+    } 
     let evals = [mb,n,frc,fc,fe,mc,me,md,ma,cd,ca,gd,ga, cr];
     let mut eval: f32 = 0.0;
     //println!("factor: eval * weight = result");
@@ -353,14 +418,14 @@ fn f_r_control(a_list:  &Vec<u8>, d_list:  &Vec<u8>, size: u8) -> f32{ //def max
     (sum as f32)/2.0
 }
 
-fn calc_weights(state: &GameState, signs: &[f32]) -> Vec<f32>{
+fn calc_weights(size: u8, signs: &[f32]) -> Vec<f32>{
     let mut mb: f32 = 0.0;
     let mut n: f32 = 0.0;
     let mut frc: f32 = 0.0;
-    let fc: f32 = (state.sizen - 1) as f32;
-    let fe: f32 = (state.sizen - 1) as f32 / 2.0;
-    let mc: f32 = (state.sizen - 1) as f32 / 2.0;
-    let me: f32 = (state.sizen - 1) as f32 / 4.0;
+    let fc: f32 = (size - 1) as f32;
+    let fe: f32 = (size - 1) as f32 / 2.0;
+    let mc: f32 = (size - 1) as f32 / 2.0;
+    let me: f32 = (size - 1) as f32 / 4.0;
     let mut md: f32 = 0.0;
     let mut ma: f32 = 0.0;
     let mut cd: f32 = 0.0;
@@ -369,7 +434,7 @@ fn calc_weights(state: &GameState, signs: &[f32]) -> Vec<f32>{
     let mut ga: f32 = 0.0;
     let cco: f32 = 4.0;
     let _jsduhf= mb *n*frc*md*ma*cd*ca*gd*ga; //just to get rid of stupid warnings ;)
-    match state.sizen {
+    match size {
         7 => {
             mb = DEFAULT_7_A.len() as f32/DEFAULT_7_D.len() as f32;
             n = DEFAULT_7_A.len() as f32+DEFAULT_7_D.len() as f32;
