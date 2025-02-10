@@ -227,6 +227,28 @@ pub fn get_no(prompt: String) -> u8 {
     player_name
 }
 
+pub fn get_no_16(prompt: String) -> u16 {
+    println!("{}", prompt);
+    let player_name: u16;
+    loop{
+        let mut request = String::new();
+        io::stdin().read_line(&mut request)
+            .expect("Failed to read line.");
+        let success = confirm(&request);
+        if success {
+            let trial = request.to_string().trim_end().parse::<u16>();
+            match  trial {
+                Ok(value) => {player_name = value; break}
+                Err(_) => {println!("Number couldn't be understood. Please try again:"); continue}
+            }
+        } else {
+            println!("Enter another number:");
+            continue
+        }
+    }
+    player_name
+}
+
 
 pub fn say_direction(input: &Direction) -> String {
     match input {

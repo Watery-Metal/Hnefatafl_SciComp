@@ -15,16 +15,34 @@ pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Pi
     a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order, time_cap, start_time).1
 }
 
-fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
+pub fn get_move_adj(present:&GameState, eval: &u16, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8, time_cap: &u8, start_time: Instant)-> Option<MoveRequest>{
+    //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
+
+    let alpha = i32::MIN;
+    let beta = i32::MAX;
+
+    a_b_search_adj(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order, time_cap, start_time).1
+}
+
+pub fn get_move_adj_new(present:&GameState, eval: &u16, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8, time_cap: &u8, start_time: Instant, weights: Vec<f32>)-> Option<MoveRequest>{
+    //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
+
+    let alpha = i32::MIN;
+    let beta = i32::MAX;
+
+    a_b_search_adj_new(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order, time_cap, start_time, weights).1
+}
+
+fn a_b_search_adj_new(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u16, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant, weights: Vec<f32>) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
     
     //Time limit, for practicality
     if (start_time.elapsed().as_secs() as u8) >= *time_cap {
-        return (game_evaluation::game_state_evaluation(&state, eval), path)
+        return (game_evaluation::game_state_evaluation_new(&state, &(*eval as u16), weights), path)
     }
     
     if state.victory.is_some() || depth == 0 {
-        return (game_evaluation::game_state_evaluation(&state, eval), path)
+        return (game_evaluation::game_state_evaluation_new(&state, &(*eval as u16), weights), path)
     }
     
     let maximizing = state.turn % 2 == 0;
@@ -36,7 +54,141 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation(&state, eval), path)
+            return (game_evaluation::game_state_evaluation_new(&state, &(*eval as u16), weights), path)
+        }
+        let mut candidate_move = all_moves[0].clone();
+        //We use alpha & beta indirectly here to avoid scopal issues with the loop
+        for possible_move in all_moves {
+            //Searches through every possible move for a given state
+            let backup = possible_move.clone();
+            let resultant_state = state.fq_game_update(&possible_move.clone());
+            if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}//Disallow loops (within reason, checking hashmaps is expensive)
+            let search_result = a_b_search_adj_new(resultant_state, depth - 1, alpha, bet, Some(possible_move), eval, None, move_order, time_cap, start_time,weights.clone()).0;
+            if search_result > value {
+                //Update the value and save the relevant move as well
+                value = search_result;
+                candidate_move = backup;
+            }
+            if value > bet {break}
+            alpha = max(alpha, value);
+        }
+        (value, Some(candidate_move))//Return Statement
+    } else {
+        //Minimizing player (Attacker)
+        let mut beta = bet;
+        let mut value = i32::MAX;
+        let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation_new(&state, &(*eval as u16), weights), path)
+        }
+        let mut candidate_move = all_moves[0].clone();
+        for possible_move in move_list(&state, move_order) {
+            let backup = possible_move.clone();
+            let resultant_state = state.fq_game_update(&possible_move.clone());
+            if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}
+            let search_result = a_b_search_adj_new(resultant_state, depth - 1, alph, beta, Some(possible_move), eval, None, move_order, time_cap, start_time,weights.clone()).0;
+            if search_result < value {
+                value = search_result;
+                candidate_move = backup;
+            }
+            if value < alph {break}
+            beta = min(beta, value);
+        }
+        (value, Some(candidate_move))//Return Statement
+    }
+
+}
+
+fn a_b_search_adj(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u16, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
+    //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
+    
+    //Time limit, for practicality
+    if (start_time.elapsed().as_secs() as u8) >= *time_cap {
+        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+    }
+    
+    if state.victory.is_some() || depth == 0 {
+        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+    }
+    
+    let maximizing = state.turn % 2 == 0;
+
+    if maximizing {
+        //Maximizing player (Defender)
+        let mut alpha = alph;
+        let mut value = i32::MIN;
+        let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+        }
+        let mut candidate_move = all_moves[0].clone();
+        //We use alpha & beta indirectly here to avoid scopal issues with the loop
+        for possible_move in all_moves {
+            //Searches through every possible move for a given state
+            let backup = possible_move.clone();
+            let resultant_state = state.fq_game_update(&possible_move.clone());
+            if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}//Disallow loops (within reason, checking hashmaps is expensive)
+            let search_result = a_b_search_adj(resultant_state, depth - 1, alpha, bet, Some(possible_move), eval, None, move_order, time_cap, start_time).0;
+            if search_result > value {
+                //Update the value and save the relevant move as well
+                value = search_result;
+                candidate_move = backup;
+            }
+            if value > bet {break}
+            alpha = max(alpha, value);
+        }
+        (value, Some(candidate_move))//Return Statement
+    } else {
+        //Minimizing player (Attacker)
+        let mut beta = bet;
+        let mut value = i32::MAX;
+        let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+        }
+        let mut candidate_move = all_moves[0].clone();
+        for possible_move in move_list(&state, move_order) {
+            let backup = possible_move.clone();
+            let resultant_state = state.fq_game_update(&possible_move.clone());
+            if history.is_some() && history.unwrap().contains(&resultant_state.board) {continue}
+            let search_result = a_b_search_adj(resultant_state, depth - 1, alph, beta, Some(possible_move), eval, None, move_order, time_cap, start_time).0;
+            if search_result < value {
+                value = search_result;
+                candidate_move = backup;
+            }
+            if value < alph {break}
+            beta = min(beta, value);
+        }
+        (value, Some(candidate_move))//Return Statement
+    }
+
+}
+
+fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
+    //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
+    
+    //Time limit, for practicality
+    if (start_time.elapsed().as_secs() as u8) >= *time_cap {
+        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+    }
+    
+    if state.victory.is_some() || depth == 0 {
+        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+    }
+    
+    let maximizing = state.turn % 2 == 0;
+
+    if maximizing {
+        //Maximizing player (Defender)
+        let mut alpha = alph;
+        let mut value = i32::MIN;
+        let all_moves = move_list(&state, move_order);
+        if all_moves.is_empty() {
+            //Possible Extinction
+            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
         }
         let mut candidate_move = all_moves[0].clone();
         //We use alpha & beta indirectly here to avoid scopal issues with the loop
@@ -62,7 +214,7 @@ fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<Mov
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation(&state, eval), path)
+            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
         }
         let mut candidate_move = all_moves[0].clone();
         for possible_move in move_list(&state, move_order) {
