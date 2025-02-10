@@ -11,6 +11,7 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u8) -> i32 {
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
             let weights = calc_weights(state, &signs);
             eval(state, weights) as i32}
+        2 => {attacker_eval(state)}
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
 }
@@ -498,4 +499,121 @@ fn get_moves_with_corners(board: &HashMap<u8, Piece>,  throne: u8, size: u8, pie
         _ =>{println!("Problem in get_moves"); panic!("Board size requsted for which no default game state has been implemented.");}
     }
     moves
+}
+
+fn attacker_eval(state: &GameState) -> i32 {
+    //Experimental evaluation for the attacker
+    if state.victory.is_some() {
+        match state.victory{
+            Some(VictoryCondition::KingCaptured) => {return i32::MIN}
+            Some(VictoryCondition::KingInCorner) => {return i32::MAX}
+            Some(VictoryCondition::AttackerExtinction) => {return i32::MAX}
+            Some(VictoryCondition::DefenderExtinction) => {return i32::MIN}
+            None => {panic!("Unreachable arm in attacker_eval in game_evaluations.rs");}
+        }
+    }
+    let mut attacker_score: i32 = 0;
+    let mut king_row: u8 = 0;
+    let mut king_col: u8 = 0;
+    let mut att_count: u8 = 0;
+    let mut def_count: u8 = 0;
+
+    let mut at_rows: Vec<bool> = Vec::new();
+    let mut at_cols: Vec<bool> = Vec::new();
+    for _ in 0..state.sizen {
+        at_cols.push(false);
+        at_rows.push(false);
+    }
+
+    for i in 0..(state.sizen * state.sizen) {
+        match state.board.get(&i) {
+            Some(&Piece::Attacker) => {
+                att_count += 1;
+                at_cols[(i % state.sizen) as usize] = true;
+                at_rows[(i / state.sizen) as usize] = true;
+            }
+            Some(&Piece::Defender) => {def_count += 1;}
+            Some(&Piece::King) => {king_row = i / state.sizen; king_col = i % state.sizen;}
+            _ => {}
+        }
+    }
+    //Reward Attacker for spreading across rows and columns
+    for condition in at_cols {
+        if condition {
+            attacker_score -= 5;
+        } else {attacker_score += 3;}
+    }
+    for condition in at_rows {
+        if condition {
+            attacker_score -=5;
+        } else {
+            attacker_score +=3;
+        }
+    }
+
+    //Prioritize Threatenting the King
+    let k_row = state.peek_row(king_row);
+    let k_col = state.peek_col(king_col);
+    let mut king_checker = false;
+    let mut p_r_a = false;
+    let mut p_c_a = false;
+    for element in k_row {
+        match element {
+            None => {continue}
+            Some(&Piece::Attacker) => {
+                p_r_a = true;
+                if king_checker {
+                    king_checker = false;
+                    attacker_score -= 100;
+                }
+            }
+            Some(&Piece::Defender) => {
+                p_r_a = false;
+                if king_checker {
+                    king_checker = false;
+                }
+            }
+            Some(&Piece::King) => {
+                if p_r_a {attacker_score -= 100}
+                p_r_a = false;
+                king_checker = true;
+            }
+        }
+    }
+    king_checker = false;
+    for element in k_col {
+        match element {
+            None => {continue}
+            Some(&Piece::Attacker) => {
+                p_c_a = true;
+                if king_checker {
+                    king_checker = false;
+                    attacker_score -= 100;
+                }
+            }
+            Some(&Piece::Defender) => {
+                p_c_a = false;
+                if king_checker {
+                    king_checker = false;
+                }
+            }
+            Some(&Piece::King) => {
+                if p_c_a {attacker_score -= 100}
+                p_c_a = false;
+                king_checker = true;
+            }
+        }
+    }
+
+    //Penalize presence of defenders
+    attacker_score += state.turn as i32 * 4 * (def_count as i32);
+
+    //Reward presence of attackers
+    attacker_score -= att_count as i32;
+
+    //Penalize proximity of king to corners
+    let midpoint: i32 = ((state.sizen as i32) + 1) / 2;
+    let king_distance = (state.turn as i32) * (((king_row as i32) % (state.sizen as i32)) - midpoint).abs() + (((king_col as i32) / (state.sizen as i32)) - midpoint).abs();
+
+    king_distance + attacker_score
 }
