@@ -45,19 +45,19 @@ const ALL_DIRECTIONS: [Direction; 4] = [Direction::U, Direction::D, Direction::L
 
 #[derive(Clone)]
 pub struct GameState {
-    sizen: u8,
-    turn: u32,
-    board: HashMap<u8, Piece>,
-    corners: Vec<u8>,
-    throne: u8,
-    victory: Option<VictoryCondition>
+    pub sizen: u8,
+    pub turn: u32,
+    pub board: HashMap<u8, Piece>,
+    pub corners: Vec<u8>,
+    pub throne: u8,
+    pub victory: Option<VictoryCondition>
 }
 
 #[derive(Clone)]
 pub struct MoveRequest {
-    position: u8,
-    direction: Direction,
-    magnitude: u8
+    pub position: u8,
+    pub direction: Direction,
+    pub magnitude: u8
 }
 
 impl PartialEq for MoveRequest {

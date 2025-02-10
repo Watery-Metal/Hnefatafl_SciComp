@@ -57,7 +57,7 @@ fn main() {
             game_organization::algorithmic_trial_matches(&trial_path, eval, order, &output_name, a_b_depth, time_cap);
         }
         4 => {
-            println!("Trial eval mode");
+            println!("Trial eval mode for signs/relevancy");
             let a_b_depth: u8 = utility::get_no("Search depth:".to_string());
             let eval = utility::get_no_16("Evaluation Function:".to_string());
             let order = utility::get_no("Move Ordering:".to_string());
@@ -67,10 +67,10 @@ fn main() {
             // let order_two = utility::get_no("Second Move Ordering:".to_string());
             let trial_path = utility::get_name("Directory for test cases:".to_string());
             let output_name = utility::get_name("Output file name:".to_string());
-            game_organization::algorithmic_trial_eval(&trial_path, eval, order, &output_name, a_b_depth, time_cap, dir);
+            game_organization::algorithmic_trial_eval_for_sign_and_relevancy_testing(&trial_path, eval, order, &output_name, a_b_depth, time_cap, dir);
         }
         5 => {
-            println!("Trial eval mode");
+            println!("Trial eval mode for weights");
             let a_b_depth: u8 = utility::get_no("Search depth:".to_string());
             let order = utility::get_no("Move Ordering:".to_string());
             let time_cap: u8 = utility::get_no("Time Limit for algorithm (in seconds):".to_string());
@@ -89,7 +89,7 @@ fn main() {
             //let weights = vec![-0.0, 0.0, 0.0, 2800.0, 0.0, -0.0, 308.00003, 56.0, 3240.0, 0.0, 0.0, -103.125, -0.0, 524880.0];
             //let weights = vec![-0.0, 0.0, 0.0, 470400.0, 0.0, -0.0, -1422.9602, 752.64, 4199040.0, 0.0, 0.0, 850.78125, -0.0, -11019961000.0];
             //let weights = vec![-0.0, 0.0, 0.0, 7902720000.0, 0.0, -0.0, 657407.6, 1011548.1, 544195580000.0, 0.0, 0.0, -701894.5, -0.0, 2.3136628e16];
-            game_organization::algorithmic_trial_eval_new(&trial_path, order, a_b_depth, time_cap, weights);
+            game_organization::algorithmic_trial_eval_for_weight_testing(&trial_path, order, a_b_depth, time_cap, weights);
         }
         _ => {
             panic!("Command line argrument was undefined.");
