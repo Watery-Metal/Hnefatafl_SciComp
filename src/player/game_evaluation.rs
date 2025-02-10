@@ -26,7 +26,7 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u16) -> i32 {
     }
 }
 
-pub fn game_state_evaluation_new(state: &GameState, eval_no: &u16, mut weights: Vec<f32>) -> i32 {
+pub fn game_state_evaluation_for_weight_testing(state: &GameState, eval_no: &u16, mut weights: Vec<f32>) -> i32 {
     match eval_no {
         0..=1000 => {
             let multi = ((eval_no % 280) /14) as f32 ;
@@ -35,7 +35,6 @@ pub fn game_state_evaluation_new(state: &GameState, eval_no: &u16, mut weights: 
                         
             weights[factor] = weights[factor] * ( 1. + adj * (multi-10.));
             eval(state, weights) as i32}
-        2 => {attacker_eval(state)}
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
 }
