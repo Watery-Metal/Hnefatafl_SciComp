@@ -21,6 +21,17 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u16) -> i32 {
             }
              
             eval(state, weights) as i32}
+        99999=>{
+            match state.sizen{
+                7 => {
+                    let weights = [2.5, -0.33333334, -8.0, 0.16666667, 0.0, 0.0, -0.6666667, -720.0, 0.8, 10584.0, 1176.0, -0.625, -354.375, -1.25];
+                    eval(state, weights) as i32}
+                11 => {
+                    let weights = [-0.0, 0.0, 0.0, 0.1, -0.0, -0.0, -0.4, 0.016666668, 0.00862069, 0.0, 0.0, 0.0, -0.041666668, -0.0];
+                    eval(state, weights) as i32}
+                _=> {panic!("Size {} not yet supported.", state.sizen);}
+            }
+        }
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
 }
