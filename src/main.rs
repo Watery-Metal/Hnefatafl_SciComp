@@ -80,11 +80,11 @@ fn main() {
             
             let signs = vec![-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0]; //Defender wants max
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
-            //let choice = vec![1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.,1.];
-            let choice = vec![0.,0.,0.,1.,1.,0.,1.,1.,1.,0.,0.,1.,0.,1.];
-            let mut weights = calc_weights(board_size as u8, &signs);
+            let choice = [0.,0.,0.,1.,0.,0.,1.,1.,1.,0.,0.,0.,1.,0.];
+            //let choice = vec![0.,0.,0.,1.,1.,0.,1.,1.,1.,0.,0.,1.,0.,1.];
+            let mut weights = calc_weights(board_size, &signs);
             for i in 0..weights.len(){
-                weights[i] = weights[i] * choice[i];
+                weights[i] *= choice[i];
             }
             //let weights = vec![-0.0, 0.0, 0.0, 2800.0, 0.0, -0.0, 308.00003, 56.0, 3240.0, 0.0, 0.0, -103.125, -0.0, 524880.0];
             //let weights = vec![-0.0, 0.0, 0.0, 470400.0, 0.0, -0.0, -1422.9602, 752.64, 4199040.0, 0.0, 0.0, 850.78125, -0.0, -11019961000.0];

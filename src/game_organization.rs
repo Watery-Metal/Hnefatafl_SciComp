@@ -338,24 +338,20 @@ pub fn algorithmic_trial_eval_for_sign_and_relevancy_testing(trial_directory: &s
     //Generate Test Configurations:
     let mut eval_pairs: Vec<(u16,u16)> = Vec::new();
     
-    //eval_pairs.push((16383,1764));
-    //eval_pairs.push((1764,16383));
-    
     
     let binary = format!("{evaluations:014b}");
-    let mut i = 0;
-    for c in binary.chars(){
+
+    for (i,c) in binary.chars().enumerate(){
         if c == '0' && dir==1 {
-            let new = evaluations + 2_u16.pow(13-i);
-            eval_pairs.push((16383,new));
-            eval_pairs.push((new, 16383));
+            let new = evaluations + 2_u16.pow((13-i).try_into().unwrap());
+            eval_pairs.push((evaluations,new));
+            eval_pairs.push((new, evaluations));
         }
         if c == '1' && dir==2 {
-            let new = evaluations - 2_u16.pow(13-i);
-            eval_pairs.push((16383,new));
-            eval_pairs.push((new, 16383));
+            let new = evaluations - 2_u16.pow((13-i).try_into().unwrap());
+            eval_pairs.push((evaluations,new));
+            eval_pairs.push((new, evaluations));
         }
-        i+=1;
     }
 
     //Begin iterating game boards with various configurations
@@ -506,12 +502,8 @@ pub fn algorithmic_trial_eval_for_weight_testing(trial_directory: &str, move_ord
             //println!("base+: m:{}, f:{}, adj:{}", ((base+280) % 280) /14, (base+280) % 14, (base+280) / 280);
             //println!("base-: m:{}, f:{}, adj:{}", ((base-280) % 280) /14, (base-280) % 14, (base-280) / 280);
             if weights[f]!=0.0 && weights[f]!= -0.0{
-                let mut eval_pairs: Vec<(u16,u16)> = Vec::new();
+                let eval_pairs: Vec<(u16,u16)> = vec![(base,base - 280),(base -280 ,base),(base,base + 280),(base +280 ,base)];
                 
-                eval_pairs.push((base,base - 280));
-                eval_pairs.push((base -280 ,base));
-                eval_pairs.push((base,base + 280));
-                eval_pairs.push((base +280 ,base));
                 let mut res = ((0,0),(0,0));
                 //Begin iterating game boards with various configurations
                 let paths = fs::read_dir(trial_directory).unwrap();
@@ -526,14 +518,14 @@ pub fn algorithmic_trial_eval_for_weight_testing(trial_directory: &str, move_ord
                                 let mut win = 0;
                                 let mut loss = 0;
                                 let vic = utility::store_vc(&test_results.victory);
-                                if tc.attacker_eval == base as u16{
+                                if tc.attacker_eval == base{
                                     if vic == "K"{//King in corner -> defender won
                                         win = 1;
                                     }
                                     else if vic == "C"{//King captured -> defender lost
                                         loss = 1;
                                     }
-                                    if tc.defender_eval == (base-280) as u16{
+                                    if tc.defender_eval == base-280{
                                         res.0.0 += win;
                                         res.0.1 += loss;
                                     }else{
@@ -547,7 +539,7 @@ pub fn algorithmic_trial_eval_for_weight_testing(trial_directory: &str, move_ord
                                     else if vic == "C"{//King captures -> attacker won
                                         win = 1;
                                     }
-                                    if tc.attacker_eval == (base-280) as u16{
+                                    if tc.attacker_eval == base-280{
                                         res.0.0 += win;
                                         res.0.1 += loss;
                                     }else{
@@ -567,10 +559,10 @@ pub fn algorithmic_trial_eval_for_weight_testing(trial_directory: &str, move_ord
                 //println!("{:?}",res);
                 if res.0.0>res.0.1{
                     //println!("Factor {} adjusted from weight {} to {}", f, weights[f], weights[f] * ( 1. - (multi-10.)));
-                    weights[f] = weights[f] * ( 1. - (multi-10.));
+                    weights[f] *= 1. - (multi-10.);
                 }else if res.1.0>res.1.1{
                     //println!("Factor {} adjusted from weight {} to {}", f, weights[f], weights[f] * ( 1. + (multi-10.)));
-                    weights[f] = weights[f] * ( 1. + (multi-10.));
+                    weights[f] *= 1. + (multi-10.);
                 }else{
                     //println!("Factor {} not adjusted", f);
                 }
