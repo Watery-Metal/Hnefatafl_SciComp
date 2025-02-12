@@ -9,7 +9,6 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u16) -> i32 {
         1..=16383 => {
             let signs = vec![-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0]; //Defender wants max
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
-            //                0     0    0     1     0     0    0      1     1    0     1    0    1     0
             //let signs = vec![-1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]; //Defender wants max
             let mut weights = calc_weights(state.sizen, &signs);
             let binary = format!("{eval_no:014b}");
