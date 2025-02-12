@@ -14,7 +14,7 @@ pub fn get_move(present:&GameState, eval: &u8, history: &VecDeque<HashMap<u8, Pi
 
     a_b_search(present.clone(), a_b_depth, alpha, beta, None, eval, Some(history), move_order, time_cap, start_time).1
 }
-
+#[allow(clippy::too_many_arguments)]
 fn a_b_search(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u8, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
     
@@ -398,16 +398,17 @@ pub fn get_move_for_sign_and_relevancy_testing(present:&GameState, eval: &u16, h
 }
 
 //Just for sign & relevancy testing
+#[allow(clippy::too_many_arguments)]
 fn a_b_search_for_sign_and_relevancy_testing(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u16, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
     
     //Time limit, for practicality
     if (start_time.elapsed().as_secs() as u8) >= *time_cap {
-        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+        return (game_evaluation::game_state_evaluation(&state, eval), path)
     }
     
     if state.victory.is_some() || depth == 0 {
-        return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+        return (game_evaluation::game_state_evaluation(&state, eval), path)
     }
     
     let maximizing = state.turn % 2 == 0;
@@ -419,7 +420,7 @@ fn a_b_search_for_sign_and_relevancy_testing(state: GameState, depth: u8, alph: 
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+            return (game_evaluation::game_state_evaluation(&state, eval), path)
         }
         let mut candidate_move = all_moves[0].clone();
         //We use alpha & beta indirectly here to avoid scopal issues with the loop
@@ -445,7 +446,7 @@ fn a_b_search_for_sign_and_relevancy_testing(state: GameState, depth: u8, alph: 
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation(&state, &(*eval as u16)), path)
+            return (game_evaluation::game_state_evaluation(&state, eval), path)
         }
         let mut candidate_move = all_moves[0].clone();
         for possible_move in move_list(&state, move_order) {
@@ -466,6 +467,7 @@ fn a_b_search_for_sign_and_relevancy_testing(state: GameState, depth: u8, alph: 
 }
 
 //Just for weight testing
+#[allow(clippy::too_many_arguments)]
 pub fn get_move_for_weight_testing(present:&GameState, eval: &u16, history: &VecDeque<HashMap<u8, Piece>>, move_order: u8, a_b_depth: u8, time_cap: &u8, start_time: Instant, weights: Vec<f32>)-> Option<MoveRequest>{
     //Alpha-Beta algorithmic players recieve a GameState, and return their favorite.
 
@@ -476,16 +478,17 @@ pub fn get_move_for_weight_testing(present:&GameState, eval: &u16, history: &Vec
 }
 
 //Just for weight testing
+#[allow(clippy::too_many_arguments)]
 fn a_b_search_for_weight_testing(state: GameState, depth: u8, alph: i32, bet: i32, path: Option<MoveRequest>, eval: &u16, history: Option<&VecDeque<HashMap<u8, Piece>>>, move_order:u8, time_cap: &u8, start_time: Instant, weights: Vec<f32>) -> (i32, Option<MoveRequest>) {
     //Adaptation of Fail-Hard Alpha-Beta search. Return values contain both the obtained value, and the path which leads to it.
     
     //Time limit, for practicality
     if (start_time.elapsed().as_secs() as u8) >= *time_cap {
-        return (game_evaluation::game_state_evaluation_for_weight_testing(&state, &(*eval as u16), weights), path)
+        return (game_evaluation::game_state_evaluation_for_weight_testing(&state, eval, weights), path)
     }
     
     if state.victory.is_some() || depth == 0 {
-        return (game_evaluation::game_state_evaluation_for_weight_testing(&state, &(*eval as u16), weights), path)
+        return (game_evaluation::game_state_evaluation_for_weight_testing(&state, eval, weights), path)
     }
     
     let maximizing = state.turn % 2 == 0;
@@ -497,7 +500,7 @@ fn a_b_search_for_weight_testing(state: GameState, depth: u8, alph: i32, bet: i3
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation_for_weight_testing(&state, &(*eval as u16), weights), path)
+            return (game_evaluation::game_state_evaluation_for_weight_testing(&state, eval, weights), path)
         }
         let mut candidate_move = all_moves[0].clone();
         //We use alpha & beta indirectly here to avoid scopal issues with the loop
@@ -523,7 +526,7 @@ fn a_b_search_for_weight_testing(state: GameState, depth: u8, alph: i32, bet: i3
         let all_moves = move_list(&state, move_order);
         if all_moves.is_empty() {
             //Possible Extinction
-            return (game_evaluation::game_state_evaluation_for_weight_testing(&state, &(*eval as u16), weights), path)
+            return (game_evaluation::game_state_evaluation_for_weight_testing(&state, eval, weights), path)
         }
         let mut candidate_move = all_moves[0].clone();
         for possible_move in move_list(&state, move_order) {

@@ -9,16 +9,15 @@ pub fn game_state_evaluation(state: &GameState, eval_no: &u16) -> i32 {
         1..=16383 => {
             let signs = vec![-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0]; //Defender wants max
             //              ["MB", "N","FRC","FC", "FE", "MC", "ME", "MD", "MA","CD", "CA","GD","GA", "CR"];
+            //                0     0    0     1     0     0    0      1     1    0     1    0    1     0
             //let signs = vec![-1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0]; //Defender wants max
             let mut weights = calc_weights(state.sizen, &signs);
             let binary = format!("{eval_no:014b}");
-            let mut i = 0;
                         
-            for c in binary.chars(){
+            for (i, c) in binary.chars().enumerate(){
                 if c=='0'{
                     weights[i] = 0.;
                 }
-                i+=1;
             }
              
             eval(state, weights) as i32}
@@ -33,7 +32,7 @@ pub fn game_state_evaluation_for_weight_testing(state: &GameState, eval_no: &u16
             let factor = (eval_no % 14) as usize;
             let adj = (eval_no / 280) as f32 -1.;
                         
-            weights[factor] = weights[factor] * ( 1. + adj * (multi-10.));
+            weights[factor] *= 1. + adj * (multi-10.);
             eval(state, weights) as i32}
         _=> {panic!("No evaluation function with index {} is present.", eval_no);}
     }
@@ -132,6 +131,7 @@ fn default_evaluation (state: &GameState) -> i32 {
     piece_balence + king_distance + king_caravan
 }
 
+//compute evaluation of gamestate
 fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
     //weight function is assumed to be constant for now
     if state.victory.is_some() {
@@ -235,6 +235,7 @@ fn eval(state: &GameState, weights: Vec<f32>) -> f32 {
     eval
 }
 
+//compute number of corners reachable
 fn corners_reachable(state: &GameState, a_list: &Vec<u8>) -> f32{
     let mut new_board : HashMap<u8, Piece> = HashMap::new();
     for i in a_list{
@@ -284,6 +285,7 @@ fn corners_reachable(state: &GameState, a_list: &Vec<u8>) -> f32{
     corners_reachable.len() as f32
 }
 
+//compute mobility of player
 fn mobility(state: &GameState, piece_list:  &Vec<u8>) -> f32{
     let mut counter = 0;
     for i in piece_list{
@@ -294,6 +296,7 @@ fn mobility(state: &GameState, piece_list:  &Vec<u8>) -> f32{
     counter as f32
 }
 
+//compute numbe rof moves to get to certain position
 fn moves_to_goal(state: &GameState, goallist: &[u8]) -> f32{
     let mut king = state.sizen * state.sizen;
     for (pos, piece) in &state.board{
@@ -342,6 +345,7 @@ fn moves_to_goal(state: &GameState, goallist: &[u8]) -> f32{
     f32::INFINITY
 }
 
+//compute coordination of player
 fn coordination(vec: &Vec<u8>, king: u8, size: u8) -> f32{
     let king_x = king % size;
     let king_y = (king - king_x)/size;
@@ -356,6 +360,7 @@ fn coordination(vec: &Vec<u8>, king: u8, size: u8) -> f32{
     sum as f32
 }
 
+//compute grouping of player
 fn grouping(vec: &Vec<u8>, size: u8) -> f32{
     let mut sum: u8 = 0;
     for i in vec{
@@ -374,6 +379,7 @@ fn grouping(vec: &Vec<u8>, size: u8) -> f32{
     sum as f32
 }
 
+//compute file rank control
 fn f_r_control(a_list:  &Vec<u8>, d_list:  &Vec<u8>, size: u8) -> f32{ //def max
     let mut board = vec![vec![0; size as usize];size as usize];
     let mut sum = 0;
@@ -418,6 +424,7 @@ fn f_r_control(a_list:  &Vec<u8>, d_list:  &Vec<u8>, size: u8) -> f32{ //def max
     (sum as f32)/2.0
 }
 
+//compute weights for initial setup
 fn calc_weights(size: u8, signs: &[f32]) -> Vec<f32>{
     let mut mb: f32 = 0.0;
     let mut n: f32 = 0.0;
@@ -465,6 +472,7 @@ fn calc_weights(size: u8, signs: &[f32]) -> Vec<f32>{
     weights
 }
 
+//compute possible moves of piece on board excluding corners
 fn get_moves(board: &HashMap<u8, Piece>, corners: &[u8], throne: u8, size: u8, piece: u8, c: char) -> Vec<u8>{
     let mut moves = vec![];
     match c {
@@ -515,6 +523,7 @@ fn get_moves(board: &HashMap<u8, Piece>, corners: &[u8], throne: u8, size: u8, p
     moves
 }
 
+//compute possible moves of piece on board including corners
 fn get_moves_with_corners(board: &HashMap<u8, Piece>,  throne: u8, size: u8, piece: u8, c: char) -> Vec<u8>{
     let mut moves = vec![];
     match c {
@@ -565,6 +574,8 @@ fn get_moves_with_corners(board: &HashMap<u8, Piece>,  throne: u8, size: u8, pie
     moves
 }
 
+//this function is not used 
+/*
 fn attacker_eval(state: &GameState) -> i32 {
     //Experimental evaluation for the attacker
     if state.victory.is_some() {
@@ -681,3 +692,4 @@ fn attacker_eval(state: &GameState) -> i32 {
 
     king_distance + attacker_score
 }
+    */
