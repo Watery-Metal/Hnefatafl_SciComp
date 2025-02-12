@@ -1,0 +1,11 @@
+11111111111111
+10 records for 00011011111011: won 7 in 20,10 average moves(d,a)
+10 records for 10001011111011: won 4 in 26,14 average moves(d,a)
+10 records for 10010011111011: won 3.1 in 110,18 average moves(d,a)
+10 records for 10011001111011: won 5.3 in 156,9 average moves(d,a)
+10 records for 10011010111011: won 5.3 in 155,10 average moves(d,a)
+10 records for 10011011101011: won 4.3 in 156,9 average moves(d,a)
+10 records for 10011011110011: won 6.1 in 79,9 average moves(d,a)
+10 records for 10011011011011: won 4.3 in 159,9 average moves(d,a)
+10 records for 10011011111001: won 4.2 in 64,58 average moves(d,a)
+10 records for 10011011111010: won 5.1 in 84,10 average moves(d,a)

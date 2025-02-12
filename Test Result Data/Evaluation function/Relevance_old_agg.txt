@@ -1,0 +1,15 @@
+11111111111111
+14 records for 11111111011111: won 9 in 5 average moves
+14 records for 11110111111111: won 8 in 4 average moves
+14 records for 11111111111101: won 8 in 4 average moves
+14 records for 11111111110111: won 8 in 4 average moves
+14 records for 11011111111111: won 7 in 4 average moves
+14 records for 11111111111110: won 7 in 5 average moves
+14 records for 11111110111111: won 7 in 4 average moves
+14 records for 11111111111011: won 7 in 4 average moves
+14 records for 11111101111111: won 8 in 4 average moves
+14 records for 11111011111111: won 8 in 4 average moves
+14 records for 11101111111111: won 9 in 5 average moves
+14 records for 10111111111111: won 8 in 4 average moves
+14 records for 1111111111111: won 7 in 4 average moves
+14 records for 11111111101111: won 7 in 5 average moves

@@ -1,0 +1,7 @@
+11111111111111
+6 records for 00000011101010: won 2.2 in 174,15 average moves(d,a)
+6 records for 00010001101010: won 3.2 in 174,12 average moves(d,a)
+6 records for 00010010101010: won 3.2 in 172,12 average moves(d,a)
+6 records for 00010011001010: won 3.2 in 174,12 average moves(d,a)
+6 records for 00010011100010: won 3.2 in 174,12 average moves(d,a)
+6 records for 00010011101000: won 3.2 in 174,12 average moves(d,a)

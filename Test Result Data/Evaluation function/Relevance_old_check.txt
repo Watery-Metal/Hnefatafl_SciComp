@@ -1,0 +1,3 @@
+Game File, Search Depth, Victory, Length, Attacker Eval, Attacker Mord, Avg Attack Time, Slowest Attack Time, Defender Eval, Defender Mord, Avg Defense Time, Slowest Defense Time
+"start_position",3,K,144,16383,4,5538,6692,15327,4,5520,5934
+"start_position",3,C,45,15327,4,5575,6284,16383,4,5508,6009

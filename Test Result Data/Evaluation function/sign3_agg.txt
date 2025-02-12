@@ -1,0 +1,5 @@
+11101111001110
+2 records for 11101111001111: won 1 in 17 average moves
+2 records for 11101111011110: won 1 in 84 average moves
+2 records for 11101111101110: won 1 in 16 average moves
+2 records for 11111111001110: won 0 in 17 average moves
