@@ -1,0 +1,16 @@
+11101111011111
+2 records for 01101111011111: won 2 in 7443
+2 records for 10101111011111: won 2 in 7461
+2 records for 11001111011111: won 1 in 7406
+2 records for 11100111011111: won 2 in 7479
+
+2 records for 11101101011111: won 2 in 7428
+2 records for 11101110011111: won 2 in 7442
+2 records for 11101111001111: won 0 in 7344
+
+2 records for 11101111011011: won 1 in 7377
+2 records for 11101111011101: won 0 in 7224
+2 records for 11101111011110: won 2 in 7332
+
+2 records for 11101110111111: won 1 in 7620
+2 records for 11011111011111: won 1 in 7463
