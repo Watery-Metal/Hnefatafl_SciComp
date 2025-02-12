@@ -338,7 +338,3 @@ pub fn read_state_from_file(file_path: &PathBuf) -> Option<GameState> {
     }
     Some(GameState{sizen, turn, victory, board, corners, throne})
 }
-
-pub fn write_test_results() {
-
-}

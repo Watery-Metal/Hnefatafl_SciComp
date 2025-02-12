@@ -24,7 +24,7 @@ def game_length_distribution(df, file_name):
     plt.ylabel("Turns Taken")
     plt.xticks([1,2,3])
     game_length_filename = file_name + "_game_length_visualization.pdf"
-    plt.savefig(game_length_filename)
+    # plt.savefig(game_length_filename)
     plt.show()
     plt.close()
 
@@ -36,29 +36,29 @@ def game_length_distribution(df, file_name):
     plt.xlabel("In-Game Turns")
     plt.ylabel("Occurences in Test")
     plt.xticks()
-    # plt.show()
+    plt.show()
     game_length_filename2 = file_name + "_game_length_barchart.pdf"
-    plt.savefig(game_length_filename2)
+    # plt.savefig(game_length_filename2)
     plt.close()
 
 def win_totals(df, file_name):
     # Visualize the frequency of win conditions with respect to various parameters
 
     # Temporary change to include only algorithm zero
-    df = df[df["Attacker Eval"] != 1]
-    df = df[df["Defender Eval"] != 1]
+    # df = df[df["Attacker Eval"] != 1]
+    # df = df[df["Defender Eval"] != 1]
 
     #Temporary change to include only depth four search
-    df = df[df["Search Depth"] == 4]
+    # df = df[df["Search Depth"] == 4]
 
     # Search Depth Distribution
     sd_victory = df.groupby(["Victory", "Search Depth"]).size().reset_index(name="Count")
     pivot_data = sd_victory.pivot(index="Search Depth", columns="Victory", values="Count").fillna(0)
     pivot_data.plot(kind="bar", stacked=True, edgecolor="black")
-    plt.title("Win Conditions with Respect to Search Depth")
+    plt.title("Win Conditions with Respect to Search Depth (Standard Boards)")
     plt.ylabel("Occurences")
     # plt.show()
-    sdwintotal = file_name + "_win_totals_sd.pdf"
+    sdwintotal = file_name + "_win_totals_sd.png"
     plt.savefig(sdwintotal)
     plt.close()
 
@@ -70,9 +70,9 @@ def win_totals(df, file_name):
     attack_pivot.plot(kind="bar", stacked=True, edgecolor="black")
     plt.ylabel("Instances of Victory")
     plt.title("Victory Conditions by Attacker Evaluation")
-    # plt.show()
-    attacker_wins = file_name + "_attack_evals.pdf"
-    plt.savefig(attacker_wins)
+    plt.show()
+    attacker_wins = file_name + "_attack_evals.png"
+    # plt.savefig(attacker_wins)
     plt.close()
 
     defender_nostall = df_excl_n.groupby(["Victory", "Defender Eval"]).size().reset_index(name="Count")
@@ -80,34 +80,85 @@ def win_totals(df, file_name):
     defender_pivot.plot(kind="bar", stacked=True, edgecolor="black")
     plt.ylabel("Instances of Victory")
     plt.title("Victory Conditions by Defender Evaluation")
-    # plt.show()
-    defender_wins = file_name + "_defend_evals.pdf"
-    plt.savefig(defender_wins)
+    plt.show()
+    defender_wins = file_name + "_defend_evals.png"
+    # plt.savefig(defender_wins)
     plt.close()
 
 
-def mord_analysis(df, file_name):
+def mord_analysis(df):
     # Potential Differences in Execution Time According to Mord
+
+    # Filter out eval one
+    df = df[(df["Attacker Eval"] != 1)]
+    df = df[(df["Defender Eval"] != 1)]
+    # For now, we only consider Search Depth Three or less (We want largely deterministic results only)
+    df = df[(df["Search Depth"].astype(int) <= 3)]
+
+    for board_type, board_data in df.groupby("Game File"):
+        board_data = board_data[board_data["Game File"] == board_type]
+        deeper_mord_analysis(board_data, board_type)
+
+
+
+def deeper_mord_analysis(df, file_name):
     grouped_amord = df.groupby(["Attacker Mord", "Avg Attack Time", "Search Depth"]).size().reset_index(name='Count')
-    sns.scatterplot(data=grouped_amord, x="Attacker Mord", y="Avg Attack Time", hue="Search Depth", markers='x')
-    plt.title("Average Attacker Decision Time (ms) by Movement-Ordering")
-    mordname1 = file_name + "_attack_mord_visual.pdf"
+    sns.scatterplot(data=grouped_amord, x="Attacker Mord", y="Avg Attack Time", hue="Search Depth", palette="deep")
+    plt.title(f"Attacker Response by Movement-Ordering ({file_name})")
+    mordname1 = file_name + "_attacker_filtered_final_mord_information.png"
+    plt.ylabel("Execution (ms)")
+    plt.xlabel("Movement Ordering")
     plt.savefig(mordname1)
-    plt.show()
+    # plt.show()
     plt.close()
 
     grouped_dmord = df.groupby(["Defender Mord", "Avg Defense Time", "Search Depth"]).size().reset_index(name='Count')
-    sns.scatterplot(data=grouped_dmord, x="Defender Mord", y="Avg Defense Time", hue="Search Depth", markers='h')
-    plt.title("Average Defender Decision Time (ms) by Movement-Ordering")
-    mordname2 = file_name + "_defend_mord_visual.pdf"
+    sns.scatterplot(data=grouped_dmord, x="Defender Mord", y="Avg Defense Time", hue="Search Depth", markers='h', palette="deep")
+    plt.title(f"Defender Response by Movement-Ordering ({file_name})")
+    plt.ylabel("Execution (ms)")
+    plt.xlabel("Movement Ordering")
+    mordname2 = file_name + "_defender_filtered_final_mord_information.png"
     plt.savefig(mordname2)
-    plt.show()
+    # plt.show()
     plt.close()
 
-
+def weighted_mord_average(df):
+    # Prints the average response in ms by mord, weighted by turns
     
-    
+    # Filter data
+    # df = df[(df["Attacker Eval"] == 2)]
+    df = df[(df["Defender Eval"] == 2)]
+    # For now, we only consider Search Depth Three or less (We want largely deterministic results only)
+    df = df[(df["Search Depth"].astype(int) == 3)]
 
+    averages_att = df.groupby("Attacker Mord").apply(weighted_average, 'Avg Attack Time', 'Length')
+    averages_def = df.groupby("Defender Mord").apply(weighted_average, 'Avg Defense Time', 'Length')
+
+    print(averages_att, averages_def)
+
+
+def weighted_average(dataframe, value, weight):
+    val = dataframe[value]
+    wt = dataframe[weight]
+    return (val * wt).sum() / wt.sum()
+
+
+def defender_win_percentage(df):
+    # Computes for a given dataset how often 'K' or 'A' are the Victory Conditions
+    
+    # Filter Data if desired
+    df = df[df["Attacker Eval"].astype(int) == 2]
+    # df = df[df["Defender Eval"].astype(int) == 1]
+    df = df[df["Search Depth"].astype(int) == 4]
+
+    # We could Use more clever conditional filtering, but this is a single purpose script
+    non_stall_victories = df[df["Victory"] != "N"].count()["Victory"]
+    attacker_extinction_count = df[df["Victory"] == "A"].count()["Victory"]
+    king_in_corner_count = df[df["Victory"] == "K"].count()["Victory"]
+
+    defense_success_percentage = 100 * ((attacker_extinction_count + king_in_corner_count) / non_stall_victories)
+    print(f"Defense Win Percentage of Supplied Dataset: {defense_success_percentage}")
+    # print(f"Common sense check. I have {non_stall_victories} non-stalled games, and {attacker_extinction_count} attacker extinctions")
 
 def analyze_game_data():
     """Main function to read the data and call the plotting functions."""
@@ -144,8 +195,10 @@ def analyze_game_data():
     df["Slowest Defense Time"] = pd.to_numeric(df["Slowest Defense Time"], errors = 'coerce').fillna(0).astype(int)
     
     # game_length_distribution(df, file_name)
-    # mord_analysis(df, file_name)
-    win_totals(df, file_name)
+    # mord_analysis(df)
+    # weighted_mord_average(df)
+    # win_totals(df, file_name)
+    # defender_win_percentage(df)
 
 
 # Run the analysis

@@ -574,7 +574,8 @@ fn get_moves_with_corners(board: &HashMap<u8, Piece>,  throne: u8, size: u8, pie
     moves
 }
 
-//this function is not used 
+//NOTE: This was the secondary "cheap" variation of the evaluation mentioned in the presentation.
+//Turning the project in, it's incompatible with the factorization test, we we've abandoned it here as a footnote 
 /*
 fn attacker_eval(state: &GameState) -> i32 {
     //Experimental evaluation for the attacker
