@@ -30,7 +30,7 @@ struct BoardState {
     board: HashMap<String, String>,
 }
 
-const EVAL: u8 = 99999;
+const EVAL: u8 = 65535;
 const HISTORY: VecDeque<HashMap<u8, Piece>> = VecDeque::new();
 const MOVE_ORDER: u8 = 0;
 const A_B_DEPTH: u8 = 3;
